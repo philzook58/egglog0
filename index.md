@@ -24,7 +24,7 @@
             document.getElementById("result").value = result;
 
         }
-
+        window.run = run;
         //run();
 </script>
 
