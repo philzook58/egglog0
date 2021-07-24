@@ -1,5 +1,5 @@
 [package]
-name = "eggdl"
+name = "egglog"
 version = "0.1.0"
 authors = ["Philip Zucker <philzook58@gmail.com>"]
 edition = "2018"
@@ -14,7 +14,6 @@ crate-type = ["cdylib", "rlib"]
 [[bin]]
 name = "mybin"
 path = "src/main.rs"
-
 
 
 [dependencies]

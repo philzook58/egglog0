@@ -1,7 +1,6 @@
-# egg-dl
+# egglog
 
-Using the egg library with a file format and semantics similar to datalog rules.
-
+Using the egg library with a file format and semantics similar to datalog.
 
 `wasm-pack build --target web`
 

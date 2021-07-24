@@ -59,7 +59,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eggdl"
+name = "egglog"
 version = "0.1.0"
 dependencies = [
  "egg",
