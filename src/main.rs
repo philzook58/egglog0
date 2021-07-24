@@ -1,6 +1,6 @@
 
 use std::fs;
-use eggdl::*;
+use egglog::*;
 /*
 mod lib;
 use lib::*;
