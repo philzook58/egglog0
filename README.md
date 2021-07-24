@@ -17,9 +17,11 @@ Another aspect that has been fascinating me is the analogy to datalog. See here 
 Datalog isn't the only system that just collects new inferences, but it is a prominent one. Resolution based theorem proving also has this flavor.
 Datalog and the egraph are monotonic, in that they just keep gaining new inferences and never make missteps. Theorem proving like in a DPLL SAT solver or prolog makes guesses that may end up being wrong and needs to backtrack them.
 This analogy has had me thinking that something prolog-esque might be a nice surface syntax for describing rules to the egraph system. And I think this makes sense.
-There tend to be similarities between rewrite rule systems and prolog for some reason. Recently at work I was decribing how one can encode reachability problems of a control flow graph (CFG) into horn clauses, which is the basis I believe of the usage of constrained horn clause solvers (CHC) in program verification. Cody piped in that he liked to think about it in some way as a rewrite rule system, but that is the church he worships at.
+There tend to be similarities between rewrite rule systems and prolog/horn clauses for some reason. Recently at work I was decribing how one can encode reachability problems of a control flow graph (CFG) into horn clauses, which is the basis I believe of the usage of constrained horn clause solvers (CHC) in program verification. Cody piped in that he liked to think about it in some way as a rewrite rule system, but that is the church he worships at.
+Egg's implementation and verbiage is currently oriented around a rewrite rule perspective. Thinking about the horn clause perspective suggests different useful constructs. In particular, in my exploration of using egraphs for categorical reasoning <https://www.philipzucker.com/rust-category/>, guard conditions are very important and take a more prominent role.
 
-The egraph can itself be considered a kind of database. An equality in the egraph is obviously information, but even just a term being in the egraph can sometimes be usefully interpreted as saying that the term is well formed or well typed. Similar to datalog we can take the bottom up execution semantics.
+
+The egraph can itself be considered a kind of database. This perspective has been pointed out to me by (internet) conversations with Allessandro Cheli and Yihong . An equality in the egraph is obviously information, but even just a term being in the egraph can sometimes be usefully interpreted as saying that the term is well formed or well typed. Similar to datalog we can take the bottom up execution semantics.
 
 - Things to the right of `:-` are things to lookup in the database
 - Thing to the left of `:-` are things to insert into the database
@@ -36,7 +38,7 @@ https://www.philipzucker.com/egraph-datalog/
 https://www.philipzucker.com/staging-patterns/
 https://www.philipzucker.com/a-simplified-egraph/
 https://www.philipzucker.com/union-find-dict/
-https://www.philipzucker.com/rust-category/
+
 https://www.philipzucker.com/metatheory-progress/
 
 
@@ -62,3 +64,6 @@ list of combinators https://github.com/Geal/nom/blob/master/doc/choosing_a_combi
 
 - Can we have Harrop formula like in lambda prolog? Forall is a way of introducing gensyms and is very natural for expressing some problems. In principle I can use ematching to increase the rule set, but I bet it would be fairly inefficient, so it would be better to preprocess and optimize. I'd also need a way to check rules for duplicates.
 - My parser is trash. I need better errors and I need to deal with whitespace better.
+- Term and GroundTerm are copies of egg::Pattern and egg::RecExpr of symbollang. Should I just get rid of them?
+- Infix operators.
+- Egg Analyses. In my application domains, I haven't felt much use of these. Constant folding is nice. Neutral terms. I don't know how to even syntactically express these well in datalog. Relations have union as join. Can consider other joins.

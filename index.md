@@ -1,7 +1,8 @@
 
-# 
+## Try It Out!
 
 <script type="module">
+        export { run };
         import init, { run_wasm } from './pkg/egglog.js';
 
         async function run() {
@@ -27,12 +28,12 @@
         //run();
 </script>
 
-<textarea id="query" rows="20" style="width:100%"> 
-f(x) = x.
+<textarea id="query" rows="20" style="width:100%">f(x) = x.
 y = x.
 plus(X,Y) <- plus(Y,X). 
 plus(b,q).
+
 ?- f(x) = x, x = x, y = x, plus(b,q) = plus(q,b), f(f(x)).
 </textarea>
 <button onclick="run()">Run</button>
-<textarea id="result" rows="20" style="width:100%">  </result>
+<textarea id="result" rows="20" style="width:100%"> </textarea>
