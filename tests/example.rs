@@ -1,5 +1,5 @@
 //use lib::*;
-use eggdl::run;
+use egglog::run;
 use std::fs;
 
 #[test]

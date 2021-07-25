@@ -26,6 +26,12 @@ fn rewrite(input: &str) -> IResult<&str, Entry> {
     Ok((input, Rewrite(a, b, body)))
 }
 
+fn birewrite(input: &str) -> IResult<&str, Entry> {
+    let (input, a) = terminated(term, tag("<->"))(input)?;
+    let (input, b) = term(input)?;
+    Ok((input, BiRewrite(a, b)))
+}
+
 fn query(input: &str) -> IResult<&str, Entry> {
     map(
         preceded(tag("?-"), separated_list1(char(','), eqterm)),
@@ -42,7 +48,8 @@ fn fact(input: &str) -> IResult<&str, Entry> {
 }
 
 fn entry(input: &str) -> IResult<&str, Entry> {
-    terminated(alt((query, directive, rewrite, clause, fact)), char('.'))(input)
+    // I should factor this more.
+    terminated(alt((query, directive, birewrite, rewrite, clause, fact)), char('.'))(input)
 }
 
 pub fn pinline_comment<'a>(i: &'a str) -> IResult<&'a str, ()> {
@@ -136,8 +143,10 @@ mod tests {
     #[test]
     fn it_works() {
             let f = "f".to_string();
+            let x = Apply("x".to_string(), vec![]);
             assert_eq!(term("f()").unwrap().1 , Apply("f".into(), vec![]));
             assert_eq!(entry("f().").unwrap().1,  Fact( Bare(GroundTerm{ head : f, args: vec![] } ) ));
+            assert_eq!(entry("x<->x.").unwrap().1 , BiRewrite(x.clone(),x));
             /* (clause("f()."));
             dbg!(clause("f():-f()."));
             dbg!(clause("f():-f(),greg()."));

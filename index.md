@@ -1,4 +1,6 @@
-# Egglog
+---
+title: "Egglog"
+---
 
 ## Try It Out!
 

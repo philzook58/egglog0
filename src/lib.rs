@@ -54,6 +54,12 @@ fn run_file(file: Vec<Entry>) -> String {
             } */
             Query(mut qs) => queries.append(&mut qs),
             Directive(_d) => (),
+            BiRewrite(a,b) => {
+                let a = pattern_of_term(&a);
+                let b = pattern_of_term(&b);
+                rules.push(egg::Rewrite::new("", "", a.clone(), b.clone()).unwrap());
+                rules.push(egg::Rewrite::new("", "", b, a).unwrap());
+            },
             Rewrite(a, b, body) => {
                 let applier = pattern_of_term(&a);
                 let b = pattern_of_term(&b);

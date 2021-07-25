@@ -1,7 +1,7 @@
 use std::fmt;
 use egg::*;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Term {
     Var(String),
     Apply(String, Vec<Term>),
@@ -62,11 +62,20 @@ pub enum Entry {
     Clause(EqWrap<Term>, Vec<EqWrap<Term>>),
     Fact(EqWrap<GroundTerm>),
     Rewrite(Term, Term, Vec<EqWrap<Term>>),
+    BiRewrite(Term,Term),
     Directive(Term),
-    Query(Vec<EqWrap<Term>>),
+    Query(Vec<EqWrap<Term>>), // Should I only allow GroundTerm queries?
 }
 
+/* enum Directive {
+NodeLimit,
+ClassLimit
+TimeLimit,
+Include,
+Clear/Reset
+}
 
+*/
 pub fn is_ground(t: &Term) -> Option<GroundTerm> {
     match t {
         Var(_) => None,

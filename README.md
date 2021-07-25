@@ -67,3 +67,7 @@ list of combinators https://github.com/Geal/nom/blob/master/doc/choosing_a_combi
 - Term and GroundTerm are copies of egg::Pattern and egg::RecExpr of symbollang. Should I just get rid of them?
 - Infix operators.
 - Egg Analyses. In my application domains, I haven't felt much use of these. Constant folding is nice. Neutral terms. I don't know how to even syntactically express these well in datalog. Relations have union as join. Can consider other joins.
+- https://github.com/egraphs-good/egg/issues/84 What about taking in s-expressions/json and outputting them? Taking in commands from stdin
+
+- Dealing with multi patterns.
+- It feels conveient to have to have queries inserted in the atabase.
