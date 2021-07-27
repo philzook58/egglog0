@@ -31,8 +31,7 @@ title: "Egglog"
         //run();
 </script>
 
-<textarea id="query" rows="20" style="width:100%">f(x) = x.
-/* Base equality facts */
+<textarea id="query" rows="20" style="width:100%">/* Base equality facts */
 y = x.
 z = y.
 /* Base egraph insertions. No implied equalities. For "seeding" the egraph. */
