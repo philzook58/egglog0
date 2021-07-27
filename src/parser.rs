@@ -1,4 +1,3 @@
-
 use crate::*;
 
 use nom::{
@@ -11,8 +10,6 @@ use nom::{
     IResult,
 };
 
-
-
 fn clause(input: &str) -> IResult<&str, Entry> {
     let (input, head) = eqterm(input)?;
     let (input, body) = preceded(tag(":-"), separated_list1(char(','), eqterm))(input)?;
@@ -22,7 +19,11 @@ fn clause(input: &str) -> IResult<&str, Entry> {
 fn rewrite(input: &str) -> IResult<&str, Entry> {
     let (input, a) = terminated(term, tag("<-"))(input)?;
     let (input, b) = term(input)?;
-    let (input, body) = separated_list0(char(','), eqterm)(input)?;
+    let (input, body) = opt(preceded(tag(","), separated_list1(char(','), eqterm)))(input)?;
+    let body = match body {
+        None => vec![],
+        Some(v) => v
+    };
     Ok((input, Rewrite(a, b, body)))
 }
 
@@ -49,7 +50,10 @@ fn fact(input: &str) -> IResult<&str, Entry> {
 
 fn entry(input: &str) -> IResult<&str, Entry> {
     // I should factor this more.
-    terminated(alt((query, directive, birewrite, rewrite, clause, fact)), char('.'))(input)
+    terminated(
+        alt((query, directive, birewrite, rewrite, clause, fact)),
+        char('.'),
+    )(input)
 }
 
 pub fn pinline_comment<'a>(i: &'a str) -> IResult<&'a str, ()> {
@@ -60,7 +64,9 @@ pub fn pinline_comment<'a>(i: &'a str) -> IResult<&'a str, ()> {
 }
 
 fn file(input: &str) -> IResult<&str, Vec<Entry>> {
-    many0(terminated(entry, opt(pinline_comment)))(input)
+    let (input, _) = many0(pinline_comment)(input)?;
+    many0(terminated(entry, many0(pinline_comment)))(input)
+    //many0(alt((entry, map(pinline_comment, )))(input)
 }
 
 pub fn parse_file(mut input: String) -> Result<Vec<Entry>, String> {
@@ -142,18 +148,24 @@ mod tests {
     use super::*;
     #[test]
     fn it_works() {
-            let f = "f".to_string();
-            let x = Apply("x".to_string(), vec![]);
-            assert_eq!(term("f()").unwrap().1 , Apply("f".into(), vec![]));
-            assert_eq!(entry("f().").unwrap().1,  Fact( Bare(GroundTerm{ head : f, args: vec![] } ) ));
-            assert_eq!(entry("x<->x.").unwrap().1 , BiRewrite(x.clone(),x));
-            /* (clause("f()."));
-            dbg!(clause("f():-f()."));
-            dbg!(clause("f():-f(),greg()."));
-            dbg!(clause("f():-f(),,greg()."));
-            dbg!(clause("f(x)."));
-            dbg!(clause("Xy."));
-            dbg!(eqterm("f=g")); */
+        let f = "f".to_string();
+        let x = Apply("x".to_string(), vec![]);
+        assert_eq!(term("f()").unwrap().1, Apply("f".into(), vec![]));
+        assert_eq!(
+            entry("f().").unwrap().1,
+            Fact(Bare(GroundTerm {
+                head: f,
+                args: vec![]
+            }))
+        );
+        assert_eq!(entry("x<->x.").unwrap().1, BiRewrite(x.clone(), x));
+        /* (clause("f()."));
+        dbg!(clause("f():-f()."));
+        dbg!(clause("f():-f(),greg()."));
+        dbg!(clause("f():-f(),,greg()."));
+        dbg!(clause("f(x)."));
+        dbg!(clause("Xy."));
+        dbg!(eqterm("f=g")); */
     }
 }
 

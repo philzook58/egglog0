@@ -1,5 +1,5 @@
-use std::fmt;
 use egg::*;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Term {
@@ -49,7 +49,6 @@ impl fmt::Display for GroundTerm {
     }
 }
 
-
 // toplevel of term is eq only
 #[derive(Debug, PartialEq)]
 pub enum EqWrap<T> {
@@ -62,7 +61,7 @@ pub enum Entry {
     Clause(EqWrap<Term>, Vec<EqWrap<Term>>),
     Fact(EqWrap<GroundTerm>),
     Rewrite(Term, Term, Vec<EqWrap<Term>>),
-    BiRewrite(Term,Term),
+    BiRewrite(Term, Term),
     Directive(Term),
     Query(Vec<EqWrap<Term>>), // Should I only allow GroundTerm queries?
 }
@@ -141,16 +140,8 @@ pub fn pattern_of_term(t: &Term) -> Pattern<SymbolLang> {
     sexp_of_term(t).parse().unwrap()
 }
 
-
 /*
-fn merge_subst( &mut s1 : Subst, &mut s2 : Subst ) -> {
-    for (v,i) in s2.vec {
-        if let Some(id) = s1.insert(v,i){
-            return true;
-        }
-    }
-    return false;
-}
+
 */
 /*
 // Private. options ;
