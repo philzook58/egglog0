@@ -2,7 +2,7 @@
 
 Using the egg library with a file format and semantics similar to datalog.
 
-Explanatory blog post: 
+Explanatory blog post: <https://www.philipzucker.com/egglog-checkpoint/>
 
 ## Try It Online!!!
 

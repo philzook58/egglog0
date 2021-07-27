@@ -79,3 +79,8 @@ TODO: Directives.
 
 # What is this?
 
+A prolog like syntax for interfacing with the egg egraph library.
+
+Github repo: <https://github.com/philzook58/egglog>
+Read more here: <https://www.philipzucker.com/egglog-checkpoint/>
+
