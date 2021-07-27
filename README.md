@@ -1,6 +1,6 @@
 # egglog
 
-Using the egg library with a file format and semantics similar to datalog.
+Using the [egg](https://egraphs-good.github.io/) library with a file format and semantics similar to datalog.
 
 Explanatory blog post: <https://www.philipzucker.com/egglog-checkpoint/>
 
