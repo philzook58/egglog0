@@ -1,0 +1,85 @@
+/* Axioms of category */
+
+/* identities exists */
+id(A) :- type(A) = ob
+
+/* Alternate axioms */
+type(id(A)) = hom(A,A) :- type(A) = ob.
+
+/* Alternate: Explicitly spelled out */
+type(id(a)) = hom(a,a).
+type(id(b)) = hom(b,b).
+
+/* type(a) = ob vs ob(a) style.
+type(F) = hom(A,B) vs hom(A,B,F) vs cod(F) = a, dom(F) = b
+*/
+
+/* composition exists */
+comp(F,G) :- type(F) = hom(A,B), type(G) = hom(B,C).
+type(comp(F,G)) = hom(A,C) :- type(F) = hom(A,B), type(G) = hom(B,C).
+
+
+/* identity axioms */
+F <- comp(id(A), F).
+F <- comp(F, id(A)).
+comp(id(A), F) = F :- type(F) = hom(A,B).
+
+/* Associativty */
+comp(comp(F,G),H) <-> comp(F, comp(G,H)).
+
+
+/* And so on */
+
+/* specify types */
+type(a) = ob.
+type(b) = ob.
+type(c) = ob.
+type(d) = ob.
+
+type(f) = hom(a,b).
+type(g) = hom(b,d).
+type(h) = hom(a,c).
+type(k) = hom(c,d).
+
+/* assume g is monic */
+F = H :- comp(F,g) = comp(H,g), dom(F) = dom(H).
+
+/* square is pullback */
+comp(f,g) = comp(h,k). /* square commutes */
+
+/* univ exist for other squares. Skolemized exists */
+comp(univ(F,H,E),h) = H, comp(univ(F,H,E),f) = F
+ :- comp(F,g) = comp(H,k), dom(F) = dom(H) = E.
+/* unique */
+U = univ(F,H,E) :- comp(F,g) = comp(H,k), dom(F) = dom(H) = E, comp(U,h) = H, comp(U,f) = F.
+
+/* Theorem:
+h is monic. => forall P Q, comp(P,h) = comp(Q,h), dom(P) = dom(Q) => P = Q
+
+We can take p and q to left of seqeunt, or intro them.
+They are arbitrary
+ */
+type(z) = ob
+type(p) = hom(z,a).
+type(q) = hom(z,a).
+comp(p,h) = comp(q,h).
+
+?- p = q.
+
+/* so in bottom up evaluation, how does this work.
+comp(p,f) exists
+comp(q,f) exists
+
+p . f . g = p . h . k is a sqaure
+q . f . g = q . h . k is a square
+p . f . g = q . h . k is a sqaure
+q . f . g = p . h . k is a square
+
+
+we instatiate the pullback on each
+univ(p.f , p.h , z)
+univ(q.f , q.h , z)
+
+
+
+*/
