@@ -22,7 +22,7 @@ fn rewrite(input: &str) -> IResult<&str, Entry> {
     let (input, body) = opt(preceded(tag(","), separated_list1(char(','), eqterm)))(input)?;
     let body = match body {
         None => vec![],
-        Some(v) => v
+        Some(v) => v,
     };
     Ok((input, Rewrite(a, b, body)))
 }

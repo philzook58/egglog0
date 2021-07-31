@@ -6,11 +6,9 @@ f(x).
 bar(boo).
 plus(p,r).
 
-/*
-TODO: general looking prolog-like rules 
+/* general looking prolog-like rules */
 bar(X) :- f(X) = q.
 biz(Z) = baz(biz(boz)) :- fizzy(floozy), buppo(Z).
-*/
 
 /* rewrite rules. Variables denoted by capitalization */
 plus(X,Y) <- plus(Y,X).

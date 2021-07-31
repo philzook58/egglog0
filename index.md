@@ -31,49 +31,36 @@ title: "Egglog"
         //run();
 </script>
 
-<textarea id="query" rows="20" style="width:100%">/* Base equality facts */
-y = x.
-z = y.
-/* Base egraph insertions. No implied equalities. For "seeding" the egraph. */
-f(x).
-bar(boo).
-plus(p,r).
+<script>
+function pickerbox(select){
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', `/examples/${select.value}`, true);
 
-/*
-TODO: general looking prolog-like rules 
-bar(X) :- f(X) = q.
-biz(Z) = baz(biz(boz)) :- fizzy(floozy), buppo(Z).
-*/
+    // If specified, responseType must be empty string or "text"
+    xhr.responseType = 'text';
 
-/* rewrite rules. Variables denoted by capitalization */
-plus(X,Y) <- plus(Y,X).
-/* In principle syntactic shorthand for plus(X,Y) = C :- plus(Y,X) = C. */
-X <- f(f(f(X))).
-X <- f(f(X)).
+    xhr.onload = function () {
+        if (xhr.readyState === xhr.DONE) {
+            if (xhr.status === 200) {
+                console.log(xhr.response);
+                console.log(xhr.responseText);
+                document.getElementById("query").value = xhr.responseText;
+            }
+        }
+    };
 
-/* bidirectional rewrite. A useful syntactic shorthand for two rewrite rules. */ 
-plus(X,plus(Y,Z)) <-> plus(plus(X,Y),Z).
+    xhr.send(null);
+}
+window.onload = () => {pickerbox(document.getElementById("examplepicker"))}
+</script>
 
-/* Guarded rewrite. */
-fiz(baz) <- bar(boo), x = z.
-
-
-/* Query equalities. Ground queries (no variables) only at the moment.
-Note that this does NOT insert into the egraph. Should I change that? Or give a new notation for "insert all subterms and then query"?
- */
-?- f(x) = x, x = x, y = x, plus(p,r) = plus(r,p), junk(boo) = otherjunk(baz).
-
-/* Query simplification */
-f(f(f(f(x)))).
-?-  f(f(f(f(x)))).
-
-/*
-TODO: Directives.
-:- node_limit(1000).
-:- include("mylibrary.pl")
-*/
+<textarea id="query" rows="20" style="width:100%">
 </textarea>
 <button onclick="run()">Run</button>
+<select name="example" onchange="pickerbox(this)" id="examplepicker">
+  <option value="basics.pl">Basics</option>
+  <option value="cat1.pl">Pullback of Monic is Monic</option>
+</select>
 <textarea id="result" rows="20" style="width:100%"> </textarea>
 
 # What is this?

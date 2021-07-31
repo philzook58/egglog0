@@ -9,30 +9,7 @@ use Term::*;
 
 mod parser;
 pub use parser::*;
-/*
 
-enum HarropGoal {
-  ForAll()
-  Exists()
-}
-enum Harrop {
-
-}
-enum QueryResult {
-
-}
-
-*/
-/*
-fn merge_subst(s1: &mut Subst, s2: &Subst) -> bool {
-    for (v, i) in s2.vec.iter() {
-        if let None = s1.insert(*v, *i) {
-            return false;
-        }
-    }
-    return true;
-}
-*/
 fn merge_subst2(s1: &Subst, s2: &Subst) -> Option<Subst> {
     let mut s1 = s1.clone();
     for (v, i) in s2.vec.iter() {
@@ -55,13 +32,44 @@ fn merge_substs(s1s: &Vec<Subst>, s2s: &Vec<Subst>) -> Vec<Subst> {
         .collect()
 }
 
-// Note: The new ground checks ought to be useful for multipattern search
 struct MultiPattern<L> {
-    patterns: Vec<Pattern<L>>, // EqWrap it eventually. To complicated for now  //dyn Searcher<L,A> // smallvec?
+    patterns: Vec<EqWrap<Pattern<L>>>,
 }
 
-use std::iter;
-// Or should this be part of Applier? Feels odd
+impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
+    fn search_eclass(&self, egraph: &EGraph<L, A>, eclass: Id) -> Option<SearchMatches> {
+        match self {
+            Bare(p) => p.search_eclass(egraph, eclass),
+            Eq(p1, p2) => {
+                let matches = p1.search_eclass(egraph, eclass)?;
+                let matches2 = p2.search_eclass(egraph, eclass)?;
+                let mut substs = vec![]; // this is merge substs above.
+                for subst1 in &matches.substs {
+                    for subst2 in &matches2.substs {
+                        if let Some(subst) = merge_subst2(subst1, subst2) {
+                            substs.push(subst);
+                        }
+                    }
+                }
+                if substs.len() == 0 {
+                    None
+                } else {
+                    Some(SearchMatches { eclass, substs })
+                }
+            }
+        }
+    }
+    fn vars(&self) -> Vec<egg::Var> {
+        match self {
+            Bare(p) => p.vars(),
+            Eq(l, r) => {
+                let mut vars = l.vars();
+                vars.extend(r.vars());
+                vars
+            }
+        }
+    }
+}
 
 impl<L: Language, A: Analysis<L>> Searcher<L, A> for MultiPattern<L> {
     fn search_eclass(&self, egraph: &EGraph<L, A>, eclass: Id) -> Option<SearchMatches> {
@@ -71,8 +79,8 @@ impl<L: Language, A: Analysis<L>> Searcher<L, A> for MultiPattern<L> {
         let mut matches = searchmatches.substs;
         for pat in iter {
             let mut temp_matches = vec![];
-            for pmatch in pat.search(egraph){
-                temp_matches.append(&mut merge_substs(& matches, &pmatch.substs));
+            for pmatch in pat.search(egraph) {
+                temp_matches.append(&mut merge_substs(&matches, &pmatch.substs));
             }
             matches = temp_matches;
         }
@@ -81,106 +89,131 @@ impl<L: Language, A: Analysis<L>> Searcher<L, A> for MultiPattern<L> {
             substs: matches,
         })
     }
-
-    // for p in &self.patterns {
-
-    /* match p {
-    Bare(p) => { let pmatch = p.search_eclass(egraph, eclass);
-                            for m in matches{
-                                for pm in pmatch {
-
-                                    merge_subst(&mut m.subst, pm.subst);
-                                }
-                    }},
-    Eq(p1,p2) => ()
-                } */
-    // }
-
-    /*
-        fn search(&self, egraph: &EGraph<L, A>) -> Vec<SearchMatches> {
-            let mut matches = vec![];
-            for p in self.patterns {
-                match p {
-                    Bare(p) => {    let pmatch = p.search(egraph);
-                                            for m in matches{
-                                                for pm in pmatch {
-
-                                                    merge_subst(&mut m.subst, pm.subst);
-                                                }
-                                    }},
-                    Eq(p1,p2) => () /*
-                                    let pmatch = p.search(egraph);
-                                    let pmatch2 = p.search_eclass(egraph, pmatch.id);
-                                            for m in matches{
-                                            merge(&mut m.subst, pmatch.subst)
-                                    }}
-                                    */
-
-                }
-
-
-            }
-            matches
-        }
-    */
     fn vars(&self) -> Vec<egg::Var> {
         let mut pats: Vec<_> = self
             .patterns
             .iter()
-            .flat_map(
-                |p| p.vars(), /*  match p {
-                                      Bare(p) => p.vars().into_iter().chain(vec![].into_iter()), // this is unfortunate
-                                      Eq(p1,p2) => p1.vars().into_iter().chain( p2.vars().into_iter())
-                                  }
-                              */
-            )
+            .flat_map(|p| <Searcher<L,A>>::vars(p))
             .collect();
         pats.sort();
         pats.dedup();
         pats
     }
 }
-/*
-struct EqApplier {
-    l : Pattern,
-    r : Pattern
+
+struct EqApply<L> {
+    l: Pattern<L>,
+    r: Pattern<L>,
 }
+// Hmm. Should I dfefine an applier for EqWrap<Pattern> instead?
+impl<N, L> Applier<L, N> for EqApply<L>
+where
+    L: Language,
+    N: Analysis<L>,
+{
+    fn apply_one(&self, egraph: &mut EGraph<L, N>, eclass: Id, subst: &Subst) -> Vec<Id> {
+        // self.0.apply_one(egraph, eclass, subst)
+        panic!("EqApply.apply_one was called");
+    }
 
-impl Applier for EqApplier {
-    fn apply_one {
+    // Could copy using apply_pat for better efficiency
+    fn apply_matches(&self, egraph: &mut EGraph<L, N>, matches: &[SearchMatches]) -> Vec<Id> {
+        let mut added = vec![]; // added are union updates, of which there are none
+        for mat in matches {
+            for subst in &mat.substs {
+                // This should be ok because we know they are patterns. Not very safe.
+                let id1 = self.l.apply_one(egraph, 0.into(), subst)[0];
+                let id2 = self.r.apply_one(egraph, 0.into(), subst)[0];
+                let (to, did_something) = egraph.union(id1, id2);
+                if did_something {
+                    added.push(to)
+                }
+            }
+        }
+        added
+    }
 
+    fn vars(&self) -> Vec<egg::Var> {
+        let mut vars = self.l.vars();
+        vars.extend(self.r.vars());
+        vars
     }
 }
 
+// Could probably generalize from pattern.
+struct IgnoreApply<L>(Pattern<L>);
 
-struct IgnoreApply(Pattern)
-// apply_one just inserts and ignores.
+impl<N, L> Applier<L, N> for IgnoreApply<L>
+where
+    L: Language,
+    N: Analysis<L>,
+{
+    fn apply_one(&self, egraph: &mut EGraph<L, N>, eclass: Id, subst: &Subst) -> Vec<Id> {
+        self.0.apply_one(egraph, eclass, subst)
+    }
 
+    // TODO: Could copy using apply_pat from Pattern impl for better efficiency. Need to make it public?
+    fn apply_matches(&self, egraph: &mut EGraph<L, N>, matches: &[SearchMatches]) -> Vec<Id> {
+        // let mut added = vec![]; // added are union updates, of which there are none
+        for mat in matches {
+            for subst in &mat.substs {
+                self.apply_one(egraph, 0.into(), subst); // root is just ignored?
+            }
+        }
+        // TODO: REALLY THINK ABOUT THIS!!!!
+        vec![0.into()] // so a clause may not make more stuff happen. Early saturation.
+    }
+
+    fn vars(&self) -> Vec<egg::Var> {
+        self.0.vars()
+    }
+}
+
+/*
+MultiApplier could be useful / efficient
+Using Conditional Equals could be useful if all variables known
+But really getting patterns to compile with substituion pieces considered known subsumes this optimization
+I think in modern egg with yihong's optimization.
+Sanity checks that needed variables exist would be good.
+May want to run Runner multiple times since it may not get restarted. Currently I have that vec![0] hack
+_ for dummy variables
+The ability to check to see if something is in the egraph.
+graphviz dumping the egraph
+harrop formula
+merge_subst that doesn't copy?
+Give rules names
+Queries with variables
+infix operators
 */
+
 fn run_file(file: Vec<Entry>) -> String {
     let mut queries = vec![];
     let mut rules = vec![];
     let mut egraph: EGraph<SymbolLang, ()> = Default::default();
     for entry in file {
         match entry {
-            Clause(Bare(head), body) => {
+            Clause(head, body) => {
                 let body = body
                     .iter()
-                    .filter_map(|eqt| match eqt {
-                        Bare(p) => Some(pattern_of_term(p)),
-                        Eq(a, b) => None, // We need to deal with this case by both extending multipatterns and seperating in ConditionalEqual checks.
+                    .map(|eqt| match eqt {
+                        Bare(p) => Bare(pattern_of_term(p)),
+                        Eq(a, b) => Eq(pattern_of_term(a), pattern_of_term(b)), 
                     })
                     .collect();
-                // let body = body.iter().map(|p| pattern_of_term(p)).collect();
                 let searcher = MultiPattern { patterns: body };
-                let applier = pattern_of_term(&head); // This is wrong because it'll unify the head. Sigh.
-               /*  match head {
-                     Bare(head) =>,
-                     EqWrap(head) => | 
-                 } */
-                //rules.push(egg::Rewrite::new("", searcher, applier).unwrap());
+                let applier = match head {
+                    Bare(head) => {
+                        let applier = IgnoreApply(pattern_of_term(&head));
+                        rules.push(egg::Rewrite::new("", searcher, applier).unwrap());
+                    }
+                    Eq(l, r) => {
+                        let l = pattern_of_term(&l);
+                        let r = pattern_of_term(&r);
+                        let applier = EqApply { l, r };
+                        rules.push(egg::Rewrite::new("", searcher, applier).unwrap());
+                    }
+                };
             }
-            Clause(Eq(a,b), body) => (),
             Query(mut qs) => queries.append(&mut qs),
             Directive(_d) => (),
             BiRewrite(a, b) => {
@@ -222,6 +255,7 @@ fn run_file(file: Vec<Entry>) -> String {
 
     let mut runner = Runner::default().with_egraph(egraph).run(&rules);
     runner.print_report();
+    // runner.egraph.dot().to_png("target/foo.png").unwrap();
     let mut buf = String::new();
     for q in queries {
         match q {
