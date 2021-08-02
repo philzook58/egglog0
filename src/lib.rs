@@ -181,8 +181,13 @@ The ability to check to see if something is in the egraph.
 graphviz dumping the egraph
 harrop formula
 merge_subst that doesn't copy?
-Give rules names
+Give rules names. Keep a hash table of them?
 Queries with variables
+Queries should be conjunctions 
+a REPL would be sweet. especially if we have higher order rules, we could watch the database, add queries
+termination based on the query condition
+side effectful searchers and appliers (printing mostly), functions.
+Astsize with weighting? Does that get me anywhere?
 infix operators
 */
 
