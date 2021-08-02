@@ -34,7 +34,7 @@ title: "Egglog"
 <script>
 function pickerbox(select){
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', `http://philzook58.github.io/egglog/examples/${select.value}`, true);
+    xhr.open('GET', `/egglog/examples/${select.value}`, true);
 
     // If specified, responseType must be empty string or "text"
     xhr.responseType = 'text';
