@@ -42,8 +42,8 @@ function pickerbox(select){
     xhr.onload = function () {
         if (xhr.readyState === xhr.DONE) {
             if (xhr.status === 200) {
-                console.log(xhr.response);
-                console.log(xhr.responseText);
+                //console.log(xhr.response);
+                //console.log(xhr.responseText);
                 document.getElementById("query").value = xhr.responseText;
             }
         }
@@ -68,5 +68,6 @@ window.onload = () => {pickerbox(document.getElementById("examplepicker"))}
 A prolog like syntax for interfacing with the egg egraph library.
 
 Github repo: <https://github.com/philzook58/egglog>
-Read more here: <https://www.philipzucker.com/egglog-checkpoint/>
-
+Read more here: 
+- <https://www.philipzucker.com/egglog-checkpoint/>
+- <https://www.philipzucker.com/egglog2-monic/>

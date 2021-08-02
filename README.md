@@ -2,8 +2,9 @@
 
 Using the [egg](https://egraphs-good.github.io/) library with a file format and semantics similar to datalog.
 
-Explanatory blog post: <https://www.philipzucker.com/egglog-checkpoint/>
-
+Explanatory blog posts: 
+- <https://www.philipzucker.com/egglog-checkpoint/>
+- <https://www.philipzucker.com/egglog2-monic/>
 ## Try It Online!!!
 
 <http://www.philipzucker.com/egglog/>
