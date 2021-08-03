@@ -26,11 +26,12 @@ fiz(baz) <- bar(boo), x = z.
 /* Query equalities. Ground queries (no variables) only at the moment.
 Note that this does NOT insert into the egraph. Should I change that? Or give a new notation for "insert all subterms and then query"?
  */
-?- f(x) = x, x = x, y = x, plus(p,r) = plus(r,p), junk(boo) = otherjunk(baz).
+?- f(x) = x, x = x, y = x, plus(p,r) = plus(r,p).
+?- junk(boo) = otherjunk(baz).
 
 /* Query simplification */
 f(f(f(f(x)))).
-?-  f(f(f(f(x)))).
+?-  f(f(f(f(x)))) = X.
 
 /*
 TODO: Directives.

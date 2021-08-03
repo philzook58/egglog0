@@ -32,6 +32,7 @@ fn merge_substs(s1s: &Vec<Subst>, s2s: &Vec<Subst>) -> Vec<Subst> {
         .collect()
 }
 
+#[derive(Debug, PartialEq)]
 struct MultiPattern<L> {
     patterns: Vec<EqWrap<Pattern<L>>>,
 }
@@ -219,7 +220,16 @@ fn run_file(file: Vec<Entry>) -> String {
                     }
                 };
             }
-            Query(mut qs) => queries.append(&mut qs),
+            Query(qs) => {
+                let qs = qs
+                    .iter()
+                    .map(|eqt| match eqt {
+                        Bare(p) => Bare(pattern_of_term(p)),
+                        Eq(a, b) => Eq(pattern_of_term(a), pattern_of_term(b)), 
+                    })
+                    .collect();
+                queries.push(MultiPattern{patterns : qs});
+            }
             Directive(_d) => (),
             BiRewrite(a, b) => {
                 let a = pattern_of_term(&a);
@@ -263,7 +273,18 @@ fn run_file(file: Vec<Entry>) -> String {
     // runner.egraph.dot().to_png("target/foo.png").unwrap();
     let mut buf = String::new();
     for q in queries {
-        match q {
+        // writeln!(buf, "{:?}", q);
+        let matches = q.search(&runner.egraph);
+        if matches.len() == 0 {
+            writeln!(buf, "unknown.");
+        } else{
+        for mat in matches{
+            for subst in mat.substs {
+                writeln!(buf, "{:?}.", subst);
+            }
+        }
+    }
+        /* match q {
             Bare(a) => {
                 if let Some(a) = is_ground(&a) {
                     let root = eid_of_groundterm(&mut runner.egraph, &a);
@@ -286,7 +307,7 @@ fn run_file(file: Vec<Entry>) -> String {
                     }
                 }
             }
-        }
+        } */
     }
     buf
 }
