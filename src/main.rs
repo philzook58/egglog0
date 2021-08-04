@@ -27,5 +27,8 @@ fn main() {
             run_file(file);
         }
     } */
-    dbg!(run(contents));
+    match run(contents) {
+        Ok(res) => println!("Results : \n{}" , res),
+        Err(err) => println!("Error : \n {}", err)
+    }
 }

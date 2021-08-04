@@ -6,7 +6,7 @@ pub use types::*;
 use Entry::*;
 use EqWrap::*;
 use Term::*;
-
+//use types::Directive::*;
 mod parser;
 pub use parser::*;
 
@@ -26,15 +26,38 @@ fn merge_subst2(s1: &Subst, s2: &Subst) -> Option<Subst> {
     return Some(s1);
 }
 
-fn merge_substs(s1s: &Vec<Subst>, s2s: &Vec<Subst>) -> Vec<Subst> {
-    s1s.iter()
-        .flat_map(|s1| s2s.iter().filter_map(move |s2| merge_subst2(s1, s2)))
-        .collect()
+fn merge_substs(substs1: &Vec<Subst>, substs2: &Vec<Subst>) -> Vec<Subst> {
+   // s1s.iter()
+    //    .flat_map(|s1| s2s.iter().filter_map(move |s2| merge_subst2(s1, s2)))
+    //    .collect()
+    let mut substs = vec![]; // this is merge substs above.
+    for subst1 in substs1 {
+        for subst2 in substs2 {
+            if let Some(subst) = merge_subst2(subst1, subst2) {
+                substs.push(subst);
+            }
+        }
+    }
+    substs
 }
 
 #[derive(Debug, PartialEq)]
-struct MultiPattern<L> {
-    patterns: Vec<EqWrap<Pattern<L>>>,
+struct MultiPattern<S> {
+    patterns: Vec<S>,
+}
+use std::fmt;
+
+impl<S> fmt::Display for MultiPattern<S> where S : fmt::Display {
+    fn fmt(&self, buf: &mut fmt::Formatter) -> fmt::Result {
+            let mut iter = self.patterns.iter();
+            if let Some(item) = iter.next() {
+                write!(buf, "{}", item)?;
+                for item in iter {
+                    write!(buf, ", {}", item)?;
+                }
+            }
+            Ok(())
+        }
 }
 
 impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
@@ -44,14 +67,7 @@ impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
             Eq(p1, p2) => {
                 let matches = p1.search_eclass(egraph, eclass)?;
                 let matches2 = p2.search_eclass(egraph, eclass)?;
-                let mut substs = vec![]; // this is merge substs above.
-                for subst1 in &matches.substs {
-                    for subst2 in &matches2.substs {
-                        if let Some(subst) = merge_subst2(subst1, subst2) {
-                            substs.push(subst);
-                        }
-                    }
-                }
+                let substs = merge_substs(&matches.substs, &matches2.substs);
                 if substs.len() == 0 {
                     None
                 } else {
@@ -72,7 +88,7 @@ impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
     }
 }
 
-impl<L: Language, A: Analysis<L>> Searcher<L, A> for MultiPattern<L> {
+impl<L: Language, A: Analysis<L>, P : Searcher<L,A>> Searcher<L, A> for MultiPattern<P> {
     fn search_eclass(&self, egraph: &EGraph<L, A>, eclass: Id) -> Option<SearchMatches> {
         let mut iter = self.patterns.iter();
         let firstpat = iter.next()?;
@@ -112,7 +128,7 @@ where
     L: Language,
     N: Analysis<L>,
 {
-    fn apply_one(&self, egraph: &mut EGraph<L, N>, eclass: Id, subst: &Subst) -> Vec<Id> {
+    fn apply_one(&self, _egraph: &mut EGraph<L, N>, _eclass: Id, _subst: &Subst) -> Vec<Id> {
         // self.0.apply_one(egraph, eclass, subst)
         panic!("EqApply.apply_one was called");
     }
@@ -190,7 +206,56 @@ termination based on the query condition
 side effectful searchers and appliers (printing mostly), functions.
 Astsize with weighting? Does that get me anywhere?
 infix operators
+better printers
 */
+
+/* 
+struct State {
+    runner : Runner,
+    rules : Vec<>
+    queries : Vec<>
+}
+fn process_entry(state : &mut State, entry : Entry) {
+    match entry {
+
+    }
+}
+
+run_file
+repl() {
+    loop{
+        receive_string
+        process
+    }
+}
+:- clear.
+:- halt.
+:- [yada.pl].
+*/
+
+type SymExpr = RecExpr<SymbolLang>;
+type SymEGraph = EGraph<SymbolLang, ()>;
+
+
+fn simplify(egraph : &SymEGraph, eid : Id ) -> SymExpr {
+    let extractor = Extractor::new(egraph, AstSize);
+    let (_best_cost, best) = extractor.find_best(eid);
+    best
+}
+
+fn print_subst<T : std::fmt::Write>(buf : &mut T, egraph : &EGraph<SymbolLang, ()>, subst : &Subst) -> Result<(),std::fmt::Error> {
+    write!(buf, "[");
+    let mut iter = subst.vec.iter();
+    if let Some((k,eid)) = iter.next() {
+        let best = simplify(egraph, *eid);
+        write!(buf,"{} = {}",k, best)?;
+        for (k,eid) in iter {
+            let best = simplify(egraph, *eid);
+            write!(buf,", {} = {}",k, best)?;
+        }
+    }
+    write!(buf, "]")
+}
 
 fn run_file(file: Vec<Entry>) -> String {
     let mut queries = vec![];
@@ -207,7 +272,7 @@ fn run_file(file: Vec<Entry>) -> String {
                     })
                     .collect();
                 let searcher = MultiPattern { patterns: body };
-                let applier = match head {
+                match head {
                     Bare(head) => {
                         let applier = IgnoreApply(pattern_of_term(&head));
                         rules.push(egg::Rewrite::new("", searcher, applier).unwrap());
@@ -223,14 +288,14 @@ fn run_file(file: Vec<Entry>) -> String {
             Query(qs) => {
                 let qs = qs
                     .iter()
-                    .map(|eqt| match eqt {
+                    .map(|eqt| match eqt { // |eqt| eqt.map(|t| pattern_of_term(&t)) /*
                         Bare(p) => Bare(pattern_of_term(p)),
                         Eq(a, b) => Eq(pattern_of_term(a), pattern_of_term(b)), 
                     })
                     .collect();
                 queries.push(MultiPattern{patterns : qs});
             }
-            Directive(_d) => (),
+            Directive(types::Directive::Include(_filename)) => (),
             BiRewrite(a, b) => {
                 let a = pattern_of_term(&a);
                 let b = pattern_of_term(&b);
@@ -268,19 +333,21 @@ fn run_file(file: Vec<Entry>) -> String {
         }
     }
 
-    let mut runner = Runner::default().with_egraph(egraph).run(&rules);
+    let runner = Runner::default().with_egraph(egraph).run(&rules);
     runner.print_report();
     // runner.egraph.dot().to_png("target/foo.png").unwrap();
     let mut buf = String::new();
     for q in queries {
-        // writeln!(buf, "{:?}", q);
+        writeln!(buf, "-? {}", q);
         let matches = q.search(&runner.egraph);
-        if matches.len() == 0 {
+        if matches.iter().all(|mat| mat.substs.len() == 0) { // why are empty matches returned? Seems like a bug.
             writeln!(buf, "unknown.");
         } else{
         for mat in matches{
             for subst in mat.substs {
-                writeln!(buf, "{:?}.", subst);
+                print_subst(&mut buf, &runner.egraph, &subst);
+                writeln!(buf,";");
+                //writeln!(buf, "{:?}.", subst);
             }
         }
     }

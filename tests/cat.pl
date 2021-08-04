@@ -1,8 +1,48 @@
 
-A <- dom(hom(A,B)).
+/* A <- dom(hom(A,B)).
 B <- cod(hom(A,B)).
 hom(A,A) <- type(id(A)).
 hom(dom(type(F)), cod(type(G))) <- type(comp(F,G)).
+*/
+
+type(id(A)) = hom(A,A) :- ob = type(A). 
+/* Composition exists if types work out */
+type(comp(F,G)) = hom(A,C) :- hom(A,B) = type(F), hom(B,C) = type(G).
+F <- comp(id(A), F).
+F <- comp(F, id(A)).
+/* associativity of composition */
+comp(comp(F,G),H) <-> comp(F, comp(G,H)).
+
+/* Monoidal */
+type(otimes(A,B)) = ob :- ob = type(A), ob = type(B).
+type(otimes(F,G)) = hom(otimes(A,B),otimes(C,D)) :- hom(A,C) = type(F), hom(B,D) = type(G).
+
+/* The non-generative form */
+hom(otimes(A,B),otimes(C,D)) = T :- type(otimes(F,G))  = T, hom(A,C) = type(F), hom(B,D) = type(G).
+
+
+/* Covers the object case too */
+otimes(otimes(F,G),H) <-> otimes(F, otimes(G,H)).
+
+type(munit) = ob.
+A <- otimes(munit, A).
+A <- otimes(A,munit).
+F <- otimes(id(munit), F).
+F <- otimes(F, id(munit)).
+
+/* Is this one necessary? */
+id(otimes(A,B)) <-> otimes(id(A), id(B)).
+
+comp(otimes(F,G), otimes(P,Q)).
+
+
+/* Now this is possible 
+F = comp(id(A), F) :- hom(A,B) = type(F).
+F = comp(F, id(B)) :- hom(A,B) = type(F).
+*/
+/* 
+More efficient form 
+*/
 
 type(a) = ob.
 /* Uhhh. Hmm. */

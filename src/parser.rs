@@ -40,8 +40,12 @@ fn query(input: &str) -> IResult<&str, Entry> {
     )(input)
 }
 
+fn include(input: &str) -> IResult<&str, Directive> {
+    map(preceded(tag("include("), take_until(")")), |filename : &str| Directive::Include(filename.to_string()))(input)
+}
+
 fn directive(input: &str) -> IResult<&str, Entry> {
-    map(preceded(tag(":-"), term), |term| Directive(term))(input)
+    map(preceded(tag(":-"), include), |d| Directive(d))(input)
 }
 
 fn fact(input: &str) -> IResult<&str, Entry> {

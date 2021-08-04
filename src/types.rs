@@ -39,9 +39,9 @@ impl fmt::Display for GroundTerm {
             write!(buf, "{}(", self.head)?;
             let mut iter = self.args.iter();
             if let Some(item) = iter.next() {
-                write!(buf, "{}", item);
+                write!(buf, "{}", item)?;
                 for item in iter {
-                    write!(buf, ", {}", item);
+                    write!(buf, ", {}", item)?;
                 }
             }
             write!(buf, ")")
@@ -55,6 +55,28 @@ pub enum EqWrap<T> {
     Eq(T, T),
     Bare(T),
 }
+impl<T> EqWrap<T> {
+pub fn map<U, F: Fn(T) -> U>(self, f: F) -> EqWrap<U> {
+    match self {
+        EqWrap::Bare(x) => EqWrap::Bare(f(x)),
+        EqWrap::Eq(a,b) => EqWrap::Eq(f(a),f(b)),
+    }
+}
+}
+
+impl<T> fmt::Display for EqWrap<T> where T : fmt::Display  {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            EqWrap::Eq(a,b) => write!(f, "{} = {}", a,b),
+            EqWrap::Bare(v) => write!(f, "{}", v)
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Directive {
+    Include(String)
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Entry {
@@ -62,7 +84,7 @@ pub enum Entry {
     Fact(EqWrap<GroundTerm>),
     Rewrite(Term, Term, Vec<EqWrap<Term>>),
     BiRewrite(Term, Term),
-    Directive(Term),
+    Directive(Directive),
     Query(Vec<EqWrap<Term>>), // Should I only allow GroundTerm queries?
 }
 
