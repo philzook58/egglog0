@@ -53,6 +53,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "egg"
 version = "0.6.1-dev"
+source = "git+https://github.com/philzook58/egg#1ccc177377dc5bbaf2715ac5bae4d9f28be5e8c5"
 dependencies = [
  "fxhash",
  "hashbrown",

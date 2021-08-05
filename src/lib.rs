@@ -27,7 +27,7 @@ fn merge_subst2(s1: &Subst, s2: &Subst) -> Option<Subst> {
 }
 
 fn merge_substs(substs1: &Vec<Subst>, substs2: &Vec<Subst>) -> Vec<Subst> {
-   // s1s.iter()
+    // s1s.iter()
     //    .flat_map(|s1| s2s.iter().filter_map(move |s2| merge_subst2(s1, s2)))
     //    .collect()
     let mut substs = vec![]; // this is merge substs above.
@@ -47,17 +47,20 @@ struct MultiPattern<S> {
 }
 use std::fmt;
 
-impl<S> fmt::Display for MultiPattern<S> where S : fmt::Display {
+impl<S> fmt::Display for MultiPattern<S>
+where
+    S: fmt::Display,
+{
     fn fmt(&self, buf: &mut fmt::Formatter) -> fmt::Result {
-            let mut iter = self.patterns.iter();
-            if let Some(item) = iter.next() {
-                write!(buf, "{}", item)?;
-                for item in iter {
-                    write!(buf, ", {}", item)?;
-                }
+        let mut iter = self.patterns.iter();
+        if let Some(item) = iter.next() {
+            write!(buf, "{}", item)?;
+            for item in iter {
+                write!(buf, ", {}", item)?;
             }
-            Ok(())
         }
+        Ok(())
+    }
 }
 
 impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
@@ -88,7 +91,7 @@ impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
     }
 }
 
-impl<L: Language, A: Analysis<L>, P : Searcher<L,A>> Searcher<L, A> for MultiPattern<P> {
+impl<L: Language, A: Analysis<L>, P: Searcher<L, A>> Searcher<L, A> for MultiPattern<P> {
     fn search_eclass(&self, egraph: &EGraph<L, A>, eclass: Id) -> Option<SearchMatches> {
         let mut iter = self.patterns.iter();
         let firstpat = iter.next()?;
@@ -110,11 +113,91 @@ impl<L: Language, A: Analysis<L>, P : Searcher<L,A>> Searcher<L, A> for MultiPat
         let mut pats: Vec<_> = self
             .patterns
             .iter()
-            .flat_map(|p| <Searcher<L,A>>::vars(p))
+            .flat_map(|p| <Searcher<L, A>>::vars(p))
             .collect();
         pats.sort();
         pats.dedup();
         pats
+    }
+}
+
+// Hmm. Should I dfefine an applier for EqWrap<Pattern> instead?
+impl<N, L, A> Applier<L, N> for MultiPattern<A>
+where
+    L: Language,
+    N: Analysis<L>,
+    A: Applier<L, N>,
+{
+    fn apply_one(&self, egraph: &mut EGraph<L, N>, eclass: Id, subst: &Subst) -> Vec<Id> {
+        let mut added = vec![]; // added are union updates, of which there are none
+        for applier in &self.patterns {
+            added.extend(applier.apply_one(egraph, eclass, subst));
+        }
+        added
+    }
+
+    fn apply_matches(&self, egraph: &mut EGraph<L, N>, matches: &[SearchMatches]) -> Vec<Id> {
+        let mut added = vec![];
+        for applier in &self.patterns {
+            added.extend(applier.apply_matches(egraph, matches));
+        }
+        added
+    }
+
+    fn vars(&self) -> Vec<egg::Var> {
+        let mut vars = vec![];
+        for applier in &self.patterns {
+            vars.extend(applier.vars());
+        }
+        // Is this necessary? How is var even used?
+        vars.sort();
+        vars.dedup();
+        vars
+    }
+}
+
+impl<N, L, A> Applier<L, N> for EqWrap<A>
+where
+    L: Language,
+    N: Analysis<L>,
+    A: Applier<L, N>,
+{
+    fn apply_one(&self, _egraph: &mut EGraph<L, N>, _eclass: Id, _subst: &Subst) -> Vec<Id> {
+        // self.0.apply_one(egraph, eclass, subst)
+        panic!("EqApply.apply_one was called");
+    }
+
+    // Could copy using apply_pat for better efficiency
+    fn apply_matches(&self, egraph: &mut EGraph<L, N>, matches: &[SearchMatches]) -> Vec<Id> {
+        match self {
+            Bare(a) => a.apply_matches(egraph, matches),
+            Eq(l, r) => {
+                let mut added = vec![]; // added are union updates, of which there are none
+                for mat in matches {
+                    for subst in &mat.substs {
+                        // This should be ok because we know they are patterns. Not very safe.
+                        let id1 = l.apply_one(egraph, 0.into(), subst)[0];
+                        let id2 = r.apply_one(egraph, 0.into(), subst)[0];
+                        let (to, did_something) = egraph.union(id1, id2);
+                        if did_something {
+                            added.push(to)
+                        }
+                    }
+                }
+                added
+            }
+        }
+    }
+
+    fn vars(&self) -> Vec<egg::Var> {
+        match self {
+            Bare(a) => a.vars(),
+            Eq(l, r) => {
+                let mut vars = l.vars();
+                vars.extend(r.vars());
+                vars
+            }
+        }
     }
 }
 
@@ -200,26 +283,19 @@ harrop formula
 merge_subst that doesn't copy?
 Give rules names. Keep a hash table of them?
 Queries with variables
-Queries should be conjunctions 
+Queries should be conjunctions
 a REPL would be sweet. especially if we have higher order rules, we could watch the database, add queries
 termination based on the query condition
 side effectful searchers and appliers (printing mostly), functions.
 Astsize with weighting? Does that get me anywhere?
 infix operators
 better printers
+rewrite files that allow intermediate queries.
 */
 
-/* 
-struct State {
-    runner : Runner,
-    rules : Vec<>
-    queries : Vec<>
-}
-fn process_entry(state : &mut State, entry : Entry) {
-    match entry {
+/*
 
-    }
-}
+
 
 run_file
 repl() {
@@ -229,152 +305,168 @@ repl() {
     }
 }
 :- clear.
-:- halt.
+: halt.
 :- [yada.pl].
 */
 
 type SymExpr = RecExpr<SymbolLang>;
 type SymEGraph = EGraph<SymbolLang, ()>;
 
-
-fn simplify(egraph : &SymEGraph, eid : Id ) -> SymExpr {
+fn simplify(egraph: &SymEGraph, eid: Id) -> SymExpr {
     let extractor = Extractor::new(egraph, AstSize);
     let (_best_cost, best) = extractor.find_best(eid);
     best
 }
 
-fn print_subst<T : std::fmt::Write>(buf : &mut T, egraph : &EGraph<SymbolLang, ()>, subst : &Subst) -> Result<(),std::fmt::Error> {
+fn print_subst<T: std::fmt::Write>(
+    buf: &mut T,
+    egraph: &EGraph<SymbolLang, ()>,
+    subst: &Subst,
+) -> Result<(), std::fmt::Error> {
     write!(buf, "[");
     let mut iter = subst.vec.iter();
-    if let Some((k,eid)) = iter.next() {
+    if let Some((k, eid)) = iter.next() {
         let best = simplify(egraph, *eid);
-        write!(buf,"{} = {}",k, best)?;
-        for (k,eid) in iter {
+        write!(buf, "{} = {}", k, best)?;
+        for (k, eid) in iter {
             let best = simplify(egraph, *eid);
-            write!(buf,", {} = {}",k, best)?;
+            write!(buf, ", {} = {}", k, best)?;
         }
     }
     write!(buf, "]")
 }
 
-fn run_file(file: Vec<Entry>) -> String {
-    let mut queries = vec![];
-    let mut rules = vec![];
-    let mut egraph: EGraph<SymbolLang, ()> = Default::default();
-    for entry in file {
-        match entry {
-            Clause(head, body) => {
-                let body = body
-                    .iter()
-                    .map(|eqt| match eqt {
-                        Bare(p) => Bare(pattern_of_term(p)),
-                        Eq(a, b) => Eq(pattern_of_term(a), pattern_of_term(b)), 
-                    })
-                    .collect();
-                let searcher = MultiPattern { patterns: body };
-                match head {
-                    Bare(head) => {
-                        let applier = IgnoreApply(pattern_of_term(&head));
-                        rules.push(egg::Rewrite::new("", searcher, applier).unwrap());
-                    }
-                    Eq(l, r) => {
-                        let l = pattern_of_term(&l);
-                        let r = pattern_of_term(&r);
-                        let applier = EqApply { l, r };
-                        rules.push(egg::Rewrite::new("", searcher, applier).unwrap());
-                    }
-                };
-            }
-            Query(qs) => {
-                let qs = qs
-                    .iter()
-                    .map(|eqt| match eqt { // |eqt| eqt.map(|t| pattern_of_term(&t)) /*
-                        Bare(p) => Bare(pattern_of_term(p)),
-                        Eq(a, b) => Eq(pattern_of_term(a), pattern_of_term(b)), 
-                    })
-                    .collect();
-                queries.push(MultiPattern{patterns : qs});
-            }
-            Directive(types::Directive::Include(_filename)) => (),
-            BiRewrite(a, b) => {
-                let a = pattern_of_term(&a);
-                let b = pattern_of_term(&b);
-                rules.push(egg::Rewrite::new("", a.clone(), b.clone()).unwrap());
-                rules.push(egg::Rewrite::new("", b, a).unwrap());
-            }
-            Rewrite(a, b, body) => {
-                let applier = pattern_of_term(&a);
-                let b = pattern_of_term(&b);
-                // consider shortcircuiting case where body = []
-                let conditions: Vec<_> = body
-                    .iter()
-                    .map(|e| {
-                        let (l, r) = match e {
-                            Eq(a, b) => (pattern_of_term(&a), pattern_of_term(&b)),
-                            Bare(a) => (pattern_of_term(&a), pattern_of_term(&a)),
-                        };
-                        ConditionEqual(l, r)
-                    })
-                    .collect();
-                let condition = move |egraph: &mut EGraph<_, _>, eclass: Id, subst: &Subst| {
-                    conditions.iter().all(|c| c.check(egraph, eclass, subst))
-                };
-                let applier = ConditionalApplier { condition, applier };
-                rules.push(egg::Rewrite::new("", b, applier).unwrap());
-            }
-            Fact(Eq(a, b)) => {
-                let a_id = eid_of_groundterm(&mut egraph, &a);
-                let b_id = eid_of_groundterm(&mut egraph, &b);
-                egraph.union(a_id, b_id);
-            }
-            Fact(Bare(a)) => {
-                eid_of_groundterm(&mut egraph, &a);
-            }
+type SymMultiPattern = MultiPattern<EqWrap<Pattern<SymbolLang>>>;
+
+#[derive(Debug)]
+struct Env {
+    runner: Runner<SymbolLang, ()>,
+    rules: Vec<egg::Rewrite<SymbolLang, ()>>,
+    queries: Vec<MultiPattern<EqWrap<Pattern<SymbolLang>>>>,
+}
+
+impl Default for Env {
+    fn default() -> Self {
+        Env {
+            runner: Runner::default(),
+            queries: vec![],
+            rules: vec![],
         }
     }
+}
 
-    let runner = Runner::default().with_egraph(egraph).run(&rules);
+fn process_entry(state: &mut Env, entry: Entry) {
+    let queries = &mut state.queries;
+    let rules = &mut state.rules;
+    let mut egraph = &mut state.runner.egraph;
+    match entry {
+        Directive(types::Directive::Include(_filename)) => (),
+        Fact(Eq(a, b)) => {
+            let a_id = eid_of_groundterm(&mut egraph, &a);
+            let b_id = eid_of_groundterm(&mut egraph, &b);
+            egraph.union(a_id, b_id);
+        }
+        Fact(Bare(a)) => {
+            eid_of_groundterm(&mut egraph, &a);
+        }
+        Clause(head, body) => {
+            let body = body
+                .iter()
+                .map(|eqt| match eqt {
+                    Bare(p) => Bare(pattern_of_term(p)),
+                    Eq(a, b) => Eq(pattern_of_term(a), pattern_of_term(b)),
+                })
+                .collect();
+            let searcher = MultiPattern { patterns: body };
+            let head = head
+                .iter()
+                .map(|eqt| match eqt {
+                    Bare(p) => Bare(pattern_of_term(p)),
+                    Eq(a, b) => Eq(pattern_of_term(a), pattern_of_term(b)),
+                })
+                .collect();
+            let applier = MultiPattern { patterns: head };
+            rules.push(
+                egg::Rewrite::new(format!("{}:-{}.", applier, searcher), searcher, applier)
+                    .unwrap(),
+            );
+            /* // consider as a small optimization for Single headed clauses (which are by far the most common.)
+            match head {
+                Bare(head) => {
+                    let applier = IgnoreApply(pattern_of_term(&head));
+                    rules.push(egg::Rewrite::new("", searcher, applier).unwrap());
+                }
+                Eq(l, r) => {
+                    let l = pattern_of_term(&l);
+                    let r = pattern_of_term(&r);
+                    let applier = EqApply { l, r };
+                    rules.push(egg::Rewrite::new("", searcher, applier).unwrap());
+                }
+            }; */
+        }
+        BiRewrite(a, b) => {
+            let a = pattern_of_term(&a);
+            let b = pattern_of_term(&b);
+            rules.push(egg::Rewrite::new("", a.clone(), b.clone()).unwrap());
+            rules.push(egg::Rewrite::new("", b, a).unwrap());
+        }
+        Rewrite(a, b, body) => {
+            let applier = pattern_of_term(&a);
+            let b = pattern_of_term(&b);
+            // consider shortcircuiting case where body = []
+            let conditions: Vec<_> = body
+                .iter()
+                .map(|e| {
+                    let (l, r) = match e {
+                        Eq(a, b) => (pattern_of_term(&a), pattern_of_term(&b)),
+                        Bare(a) => (pattern_of_term(&a), pattern_of_term(&a)),
+                    };
+                    ConditionEqual(l, r)
+                })
+                .collect();
+            let condition = move |egraph: &mut EGraph<_, ()>, eclass: Id, subst: &Subst| {
+                conditions.iter().all(|c| c.check(egraph, eclass, subst))
+            };
+            let applier = ConditionalApplier { condition, applier };
+            rules.push(egg::Rewrite::new("", b, applier).unwrap());
+        }
+        Query(qs) => {
+            let qs = qs
+                .iter()
+                .map(|eqt| match eqt {
+                    // |eqt| eqt.map(|t| pattern_of_term(&t)) /*
+                    Bare(p) => Bare(pattern_of_term(p)),
+                    Eq(a, b) => Eq(pattern_of_term(a), pattern_of_term(b)),
+                })
+                .collect();
+            queries.push(MultiPattern { patterns: qs });
+        }
+    }
+}
+
+fn run_file(file: Vec<Entry>) -> String {
+    let mut env = Env::default();
+    for entry in file {
+        process_entry(&mut env, entry)
+    }
+    let runner = env.runner.run(&env.rules);
     runner.print_report();
     // runner.egraph.dot().to_png("target/foo.png").unwrap();
     let mut buf = String::new();
-    for q in queries {
+    for q in env.queries {
         writeln!(buf, "-? {}", q);
         let matches = q.search(&runner.egraph);
-        if matches.iter().all(|mat| mat.substs.len() == 0) { // why are empty matches returned? Seems like a bug.
+        if matches.iter().all(|mat| mat.substs.len() == 0) {
+            // why are empty matches returned? Seems like a bug.
             writeln!(buf, "unknown.");
-        } else{
-        for mat in matches{
-            for subst in mat.substs {
-                print_subst(&mut buf, &runner.egraph, &subst);
-                writeln!(buf,";");
-                //writeln!(buf, "{:?}.", subst);
+        } else {
+            for mat in matches {
+                for subst in mat.substs {
+                    print_subst(&mut buf, &runner.egraph, &subst);
+                    writeln!(buf, ";");
+                }
             }
         }
-    }
-        /* match q {
-            Bare(a) => {
-                if let Some(a) = is_ground(&a) {
-                    let root = eid_of_groundterm(&mut runner.egraph, &a);
-                    let mut extractor = Extractor::new(&runner.egraph, AstSize);
-                    let (_best_cost, best) = extractor.find_best(root);
-                    writeln!(buf, "{} => {}", a, best);
-                }
-            }
-            Eq(a, b) => {
-                // Could run pattern search on the egraph and extract minimal terms if non ground query.
-                if let Some(a) = is_ground(&a) {
-                    let aid = eid_of_groundterm(&mut runner.egraph, &a);
-                    if let Some(b) = is_ground(&b) {
-                        let bid = eid_of_groundterm(&mut runner.egraph, &b);
-                        if aid == bid {
-                            writeln!(buf, "{} = {}", a, b);
-                        } else {
-                            writeln!(buf, "{} ?= {}", a, b);
-                        }
-                    }
-                }
-            }
-        } */
     }
     buf
 }

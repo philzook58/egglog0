@@ -11,7 +11,7 @@ use nom::{
 };
 
 fn clause(input: &str) -> IResult<&str, Entry> {
-    let (input, head) = eqterm(input)?;
+    let (input, head) = separated_list1(char(','), eqterm)(input)?;
     let (input, body) = preceded(tag(":-"), separated_list1(char(','), eqterm))(input)?;
     Ok((input, Clause(head, body)))
 }
@@ -41,7 +41,33 @@ fn query(input: &str) -> IResult<&str, Entry> {
 }
 
 fn include(input: &str) -> IResult<&str, Directive> {
-    map(preceded(tag("include("), take_until(")")), |filename : &str| Directive::Include(filename.to_string()))(input)
+    map(
+        preceded(tag("include("), take_until(")")),
+        |filename: &str| Directive::Include(filename.to_string()),
+    )(input)
+}
+
+fn forall(input: &str) -> IResult<&str, Formula> {
+    let (input, v) = preceded(tag("forall("), alphanumeric0)(input)?;
+    let (input, f) = terminated(formula, tag(")"))(input)?;
+    Ok((input, Formula::ForAll(v.to_string(), Box::new(f))))
+}
+
+fn conj(input: &str) -> IResult<&str, Formula> {
+    map(separated_list1(alt((tag(","), tag("&"))), formula), |fs| {
+        Formula::Conj(fs)
+    })(input)
+}
+
+fn atom(input: &str) -> IResult<&str, Formula> {
+    map(eqterm, |eqt| Formula::Atom(eqt))(input)
+}
+
+fn formula(input: &str) -> IResult<&str, Formula> {
+    alt((
+        delimited(tag("("), formula, tag(")")),
+        alt((forall, conj, atom)),
+    ))(input)
 }
 
 fn directive(input: &str) -> IResult<&str, Entry> {

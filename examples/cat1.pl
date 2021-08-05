@@ -65,6 +65,11 @@ type(p) = hom(z,a).
 type(q) = hom(z,a).
 comp(p,h) = comp(q,h).
 
-?- p = q, f = g, p = f, k = h, k = g, type(comp(p,h)).
-
-?- type(id(a)) = hom(a,a), comp(comp(id(a), h), k).
+?- p = q.
+?- f = g.
+?- p = f.
+?- k = h.
+?- k = g.
+?- type(comp(p,h)) = T.
+?- type(id(a)) = hom(a,a).
+?- comp(comp(id(a), h), k) = T.

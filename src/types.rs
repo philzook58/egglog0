@@ -55,32 +55,37 @@ pub enum EqWrap<T> {
     Eq(T, T),
     Bare(T),
 }
+// We could also consider MultiEq { terms : Vec<T> } for more than one A= B = C = D
+
 impl<T> EqWrap<T> {
-pub fn map<U, F: Fn(T) -> U>(self, f: F) -> EqWrap<U> {
-    match self {
-        EqWrap::Bare(x) => EqWrap::Bare(f(x)),
-        EqWrap::Eq(a,b) => EqWrap::Eq(f(a),f(b)),
+    pub fn map<U, F: Fn(T) -> U>(self, f: F) -> EqWrap<U> {
+        match self {
+            EqWrap::Bare(x) => EqWrap::Bare(f(x)),
+            EqWrap::Eq(a, b) => EqWrap::Eq(f(a), f(b)),
+        }
     }
 }
-}
 
-impl<T> fmt::Display for EqWrap<T> where T : fmt::Display  {
+impl<T> fmt::Display for EqWrap<T>
+where
+    T: fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            EqWrap::Eq(a,b) => write!(f, "{} = {}", a,b),
-            EqWrap::Bare(v) => write!(f, "{}", v)
+            EqWrap::Eq(a, b) => write!(f, "{} = {}", a, b),
+            EqWrap::Bare(v) => write!(f, "{}", v),
         }
     }
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Directive {
-    Include(String)
+    Include(String),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Entry {
-    Clause(EqWrap<Term>, Vec<EqWrap<Term>>),
+    Clause(Vec<EqWrap<Term>>, Vec<EqWrap<Term>>),
     Fact(EqWrap<GroundTerm>),
     Rewrite(Term, Term, Vec<EqWrap<Term>>),
     BiRewrite(Term, Term),
@@ -88,6 +93,15 @@ pub enum Entry {
     Query(Vec<EqWrap<Term>>), // Should I only allow GroundTerm queries?
 }
 
+// G and D formula? My intend is for this to be query formula for the moment.
+#[derive(Debug, PartialEq)]
+pub enum Formula {
+    Implies(Box<Formula>, Box<Formula>),
+    Conj(Vec<Formula>),
+    ForAll(String, Box<Formula>),
+    Exists(String, Box<Formula>),
+    Atom(EqWrap<Term>),
+}
 /* enum Directive {
 NodeLimit,
 ClassLimit
