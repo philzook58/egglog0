@@ -270,27 +270,35 @@ where
 }
 
 /*
-MultiApplier could be useful / efficient
-Using Conditional Equals could be useful if all variables known
-But really getting patterns to compile with substituion pieces considered known subsumes this optimization
-I think in modern egg with yihong's optimization.
-Sanity checks that needed variables exist would be good.
-May want to run Runner multiple times since it may not get restarted. Currently I have that vec![0] hack
-_ for dummy variables
-The ability to check to see if something is in the egraph.
-graphviz dumping the egraph
-harrop formula
-merge_subst that doesn't copy?
-Give rules names. Keep a hash table of them?
-Queries with variables
-Queries should be conjunctions
-a REPL would be sweet. especially if we have higher order rules, we could watch the database, add queries
-termination based on the query condition
-side effectful searchers and appliers (printing mostly), functions.
-Astsize with weighting? Does that get me anywhere?
-infix operators
-better printers
-rewrite files that allow intermediate queries.
+-[x] MultiApplier could be useful / efficient
+-[] Using Conditional Equals could be useful if all variables known
+-[] But really getting patterns to compile with substituion pieces considered known subsumes this optimization I think in modern egg with yihong's optimization.
+-[] Sanity checks that needed variables exist would be good. It does crash with named rules, so that's something.
+-[] May want to run Runner multiple times since it may not get restarted. Currently I have that vec![0] hack
+-[] _ for dummy variables
+-[] The ability to check to see if something is in the egraph.
+-[] graphviz dumping the egraph
+-[] harrop formula
+-[] merge_subst that doesn't copy?
+-[] Give rules names. Keep a hash table of them?
+-[x] Queries with variables
+-[x] Queries should be conjunctions
+-[X] a REPL would be sweet. especially if we have higher order rules, we could watch the database, add queries
+-[] termination based on the query condition
+-[] side effectful searchers and appliers (printing mostly), functions.
+-[] Astsize with weighting? Does that get me anywhere?
+-[] infix operators
+-[] better printers
+-[] rewrite/proof files that allow intermediate queriess. set of support?
+-[x] cli
+-[] smtlib subset (forall (a b ) (= (f a) (g c))  ) ! :pattern) or horn cluase style.
+-[] vaguely ML/coq style synax
+-[] tptp syntax?
+-[] push pop directives instead of clear.
+-[] only allow stuff that compresses the egraph? Appliers that do not add terms to the egraph or only add a couple? Or keeps counts.
+-[] directives to changes egraph params. or flags?
+-[] Macros/simplification stage?
+-[] typed symbollang - would this even be an optimization?
 */
 
 /*
@@ -338,8 +346,9 @@ fn print_subst<T: std::fmt::Write>(
 
 type SymMultiPattern = MultiPattern<EqWrap<Pattern<SymbolLang>>>;
 
+// Current directory and already included set?
 #[derive(Debug)]
-struct Env {
+pub struct Env {
     runner: Runner<SymbolLang, ()>,
     rules: Vec<egg::Rewrite<SymbolLang, ()>>,
     queries: Vec<MultiPattern<EqWrap<Pattern<SymbolLang>>>>,
@@ -355,12 +364,31 @@ impl Default for Env {
     }
 }
 
-fn process_entry(state: &mut Env, entry: Entry) {
+use std::fs;
+fn load_file(env: &mut Env, filename: &str) -> Result<(), String> {
+    match fs::read_to_string(filename) {
+        Err(e) => Err(format!("Error: file {} not found", filename)),
+        Ok(contents) => match parse_file(contents) {
+            Err(e) => Err(format!(
+                "Error : file {} failed to parse with error : {}",
+                filename, e
+            )),
+            Ok(entries) => {
+                for entry in entries {
+                    process_entry(env, entry);
+                }
+                Ok(())
+            }
+        },
+    }
+}
+// impl Env?
+pub fn process_entry(state: &mut Env, entry: Entry) {
     let queries = &mut state.queries;
     let rules = &mut state.rules;
     let mut egraph = &mut state.runner.egraph;
     match entry {
-        Directive(types::Directive::Include(_filename)) => (),
+        Directive(types::Directive::Include(filename)) => load_file(state, &filename).unwrap(), // TODO: This include is not relative. That's not good.
         Fact(Eq(a, b)) => {
             let a_id = eid_of_groundterm(&mut egraph, &a);
             let b_id = eid_of_groundterm(&mut egraph, &b);
@@ -407,8 +435,8 @@ fn process_entry(state: &mut Env, entry: Entry) {
         BiRewrite(a, b) => {
             let a = pattern_of_term(&a);
             let b = pattern_of_term(&b);
-            rules.push(egg::Rewrite::new("", a.clone(), b.clone()).unwrap());
-            rules.push(egg::Rewrite::new("", b, a).unwrap());
+            rules.push(egg::Rewrite::new(format!("{}->{}", a,b) , a.clone(), b.clone()).unwrap());
+            rules.push(egg::Rewrite::new(format!("{}->{}", b,a) , b, a).unwrap());
         }
         Rewrite(a, b, body) => {
             let applier = pattern_of_term(&a);
@@ -428,7 +456,7 @@ fn process_entry(state: &mut Env, entry: Entry) {
                 conditions.iter().all(|c| c.check(egraph, eclass, subst))
             };
             let applier = ConditionalApplier { condition, applier };
-            rules.push(egg::Rewrite::new("", b, applier).unwrap());
+            rules.push(egg::Rewrite::new(format!("{} -{:?}> {}",b,body,a), b, applier).unwrap());
         }
         Query(qs) => {
             let qs = qs
@@ -444,6 +472,7 @@ fn process_entry(state: &mut Env, entry: Entry) {
     }
 }
 
+// Refactor this to return not string.
 fn run_file(file: Vec<Entry>) -> String {
     let mut env = Env::default();
     for entry in file {

@@ -40,13 +40,6 @@ fn query(input: &str) -> IResult<&str, Entry> {
     )(input)
 }
 
-fn include(input: &str) -> IResult<&str, Directive> {
-    map(
-        preceded(tag("include("), take_until(")")),
-        |filename: &str| Directive::Include(filename.to_string()),
-    )(input)
-}
-
 fn forall(input: &str) -> IResult<&str, Formula> {
     let (input, v) = preceded(tag("forall("), alphanumeric0)(input)?;
     let (input, f) = terminated(formula, tag(")"))(input)?;
@@ -68,6 +61,13 @@ fn formula(input: &str) -> IResult<&str, Formula> {
         delimited(tag("("), formula, tag(")")),
         alt((forall, conj, atom)),
     ))(input)
+}
+
+fn include(input: &str) -> IResult<&str, Directive> {
+    map(
+        delimited(tag("include("), take_until(")"), tag(")")),
+        |filename: &str| Directive::Include(filename.to_string()),
+    )(input)
 }
 
 fn directive(input: &str) -> IResult<&str, Entry> {
@@ -106,7 +106,7 @@ pub fn parse_file(mut input: String) -> Result<Vec<Entry>, String> {
             if rem.is_empty() {
                 Ok(f)
             } else {
-                Err(format!("Did not parse all of file. Remainder : {}", rem))
+                Err(format!("Remainder: {}", rem))
             }
         }
         Err(e) => Err(e.to_string()),
@@ -196,6 +196,14 @@ mod tests {
         dbg!(clause("f(x)."));
         dbg!(clause("Xy."));
         dbg!(eqterm("f=g")); */
+    }
+    #[test]
+    fn includetest() {
+        let f = "foo.pl".to_string();
+        assert_eq!(
+            entry(":-include(foo.pl).").unwrap().1,
+            Directive(Directive::Include(f.clone()))
+        );
     }
 }
 

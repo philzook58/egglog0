@@ -12,7 +12,7 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
-name = "mybin"
+name = "egglog"
 path = "src/main.rs"
 
 
@@ -21,3 +21,5 @@ nom = "6"
 egg = { git = "https://github.com/philzook58/egg" } #{path = "../egg/"}
 wasm-bindgen = "0.2.74"
 parking_lot = { version = "0.11.1", features = ["wasm-bindgen"]}
+clap = "3.0.0-beta.2"
+rustyline = "8.2.0"

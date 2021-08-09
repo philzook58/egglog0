@@ -59,6 +59,9 @@ window.onload = () => {pickerbox(document.getElementById("examplepicker"))}
 <button onclick="run()">Run</button>
 <select name="example" onchange="pickerbox(this)" id="examplepicker">
   <option value="basics.pl">Basics</option>
+   <option value="datalog.pl">Datalog</option>
+   <option value="lists.pl">Lists</option>
+  <option value="arith.pl">Arithmetic</option>
   <option value="cat1.pl">Pullback of Monic is Monic</option>
 </select>
 <textarea id="result" rows="20" style="width:100%"> </textarea>
