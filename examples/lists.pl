@@ -36,7 +36,9 @@ nil <- filter(F,nil).
 cons(X,filter(F,L)) <- filter( F, cons(X,L) ), apply(F,X) = true.
 filter(F,L) <- filter( F, cons(X,L) ), apply(F,X) = false.
 
+/* defunctionalization */
 X <- apply(id, X).
+/* What is id? a partial function over the union of all types? A relation? */
 
 filter(id, cons(true,cons(false,nil))).
 ?- filter(id, cons(true,cons(false,nil))) = Res.

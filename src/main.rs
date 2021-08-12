@@ -27,10 +27,12 @@ use rustyline::Editor;
 fn repl() {
     let mut rl = Editor::<()>::new();
     let mut env = Env::default();
-    println!("\
+    println!(
+        "\
     Egglog - Philip Zucker <philzook58@gmail.com> 2021\n\
     Type \":- help.\" for more information.\n\
-    ");
+    "
+    );
     loop {
         let readline = rl.readline(">> ");
         match readline {

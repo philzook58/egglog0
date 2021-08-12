@@ -1,10 +1,11 @@
 use crate::*;
-
+use logic::*;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until},
-    character::complete::{alphanumeric0, alphanumeric1, char, satisfy},
+    character::complete::{alphanumeric0, alphanumeric1, char, multispace0, multispace1, satisfy},
     combinator::{map, opt, value},
+    error::ParseError,
     multi::{many0, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
@@ -171,6 +172,30 @@ fn eqterm(input: &str) -> IResult<&str, EqWrap<Term>> {
             None => Bare(t),
         },
     )(input)
+}
+
+/// A combinator that takes a parser `inner` and produces a parser that also consumes both leading and
+/// trailing whitespace, returning the output of `inner`.
+fn ws<'a, F: 'a, O, E: ParseError<&'a str>>(
+    inner: F,
+) -> impl FnMut(&'a str) -> IResult<&'a str, O, E>
+where
+    F: FnMut(&'a str) -> IResult<&'a str, O, E>,
+{
+    delimited(multispace0, inner, multispace0)
+}
+
+/*
+I could redesign it so that variables must be bound.
+*/
+fn apply2(input: &str) -> IResult<&str, Term> {
+    let (input, head) = terminated(alphanumeric1, multispace0)(input)?;
+    let (input, body) = separated_list0(multispace1, term2)(input)?;
+    Ok((input, Apply(head.to_string(), body)))
+}
+
+fn term2(input: &str) -> IResult<&str, Term> {
+    ws(alt((delimited(tag("("), term2, tag(")")), var, apply2)))(input)
 }
 
 #[cfg(test)]

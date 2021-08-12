@@ -93,15 +93,7 @@ pub enum Entry {
     Query(Vec<EqWrap<Term>>), // Should I only allow GroundTerm queries?
 }
 
-// G and D formula? My intend is for this to be query formula for the moment.
-#[derive(Debug, PartialEq)]
-pub enum Formula {
-    Implies(Box<Formula>, Box<Formula>),
-    Conj(Vec<Formula>),
-    ForAll(String, Box<Formula>),
-    Exists(String, Box<Formula>),
-    Atom(EqWrap<Term>),
-}
+
 /* enum Directive {
 NodeLimit,
 ClassLimit

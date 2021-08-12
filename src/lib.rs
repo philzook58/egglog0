@@ -1,6 +1,8 @@
 use egg::*;
 use std::fmt::Write;
 
+mod gensym;
+mod logic;
 mod types;
 pub use types::*;
 use Entry::*;
@@ -299,6 +301,10 @@ where
 -[] directives to changes egraph params. or flags?
 -[] Macros/simplification stage?
 -[] typed symbollang - would this even be an optimization?
+-[] defunctionalization of lambdas. lambda-egglog
+
+backchain until stumped? depth limitted backchain?
+
 */
 
 /*
@@ -435,8 +441,8 @@ pub fn process_entry(state: &mut Env, entry: Entry) {
         BiRewrite(a, b) => {
             let a = pattern_of_term(&a);
             let b = pattern_of_term(&b);
-            rules.push(egg::Rewrite::new(format!("{}->{}", a,b) , a.clone(), b.clone()).unwrap());
-            rules.push(egg::Rewrite::new(format!("{}->{}", b,a) , b, a).unwrap());
+            rules.push(egg::Rewrite::new(format!("{}->{}", a, b), a.clone(), b.clone()).unwrap());
+            rules.push(egg::Rewrite::new(format!("{}->{}", b, a), b, a).unwrap());
         }
         Rewrite(a, b, body) => {
             let applier = pattern_of_term(&a);
@@ -456,7 +462,7 @@ pub fn process_entry(state: &mut Env, entry: Entry) {
                 conditions.iter().all(|c| c.check(egraph, eclass, subst))
             };
             let applier = ConditionalApplier { condition, applier };
-            rules.push(egg::Rewrite::new(format!("{} -{:?}> {}",b,body,a), b, applier).unwrap());
+            rules.push(egg::Rewrite::new(format!("{} -{:?}> {}", b, body, a), b, applier).unwrap());
         }
         Query(qs) => {
             let qs = qs
@@ -472,13 +478,19 @@ pub fn process_entry(state: &mut Env, entry: Entry) {
     }
 }
 
+use core::time::Duration;
 // Refactor this to return not string.
 fn run_file(file: Vec<Entry>) -> String {
     let mut env = Env::default();
     for entry in file {
         process_entry(&mut env, entry)
     }
-    let runner = env.runner.run(&env.rules);
+    let runner = env
+        .runner
+        .with_iter_limit(30)
+        .with_node_limit(10_000)
+        .with_time_limit(Duration::from_secs(5))
+        .run(&env.rules);
     runner.print_report();
     // runner.egraph.dot().to_png("target/foo.png").unwrap();
     let mut buf = String::new();

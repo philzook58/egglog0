@@ -60,6 +60,7 @@ window.onload = () => {pickerbox(document.getElementById("examplepicker"))}
 <select name="example" onchange="pickerbox(this)" id="examplepicker">
   <option value="basics.pl">Basics</option>
    <option value="datalog.pl">Datalog</option>
+   <option value="ski.pl">SKI Combinators</option>
    <option value="lists.pl">Lists</option>
   <option value="arith.pl">Arithmetic</option>
   <option value="cat1.pl">Pullback of Monic is Monic</option>
