@@ -64,6 +64,7 @@ window.onload = () => {pickerbox(document.getElementById("examplepicker"))}
    <option value="lists.pl">Lists</option>
   <option value="arith.pl">Arithmetic</option>
   <option value="cat1.pl">Pullback of Monic is Monic</option>
+  <option value="id_unique.pl">Uniqueness of Identity</option>
 </select>
 <textarea id="result" rows="20" style="width:100%"> </textarea>
 
