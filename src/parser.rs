@@ -198,6 +198,42 @@ fn term2(input: &str) -> IResult<&str, Term> {
     ws(alt((delimited(tag("("), term2, tag(")")), var, apply2)))(input)
 }
 
+fn eqterm2(input: &str) -> IResult<&str, EqWrap<Term>> {
+    map(
+        ws(pair(term2, opt(preceded(ws(char('=')), term2)))),
+        |(t, ot)| match ot {
+            Some(t2) => Eq(t, t2),
+            None => Bare(t),
+        },
+    )(input)
+}
+
+fn forall2(input: &str) -> IResult<&str, Formula> {
+    let (input, v) = delimited(
+        ws(tag("forall")),
+        alphanumeric0 , 
+        ws(tag(",")))(input)?;
+    let (input, f) = terminated(formula2, tag(")"))(input)?;
+    Ok((input, Formula::ForAll(v.to_string(), Box::new(f))))
+}
+
+fn conj2(input: &str) -> IResult<&str, Formula> {
+    map(separated_list1(ws(alt((tag(","), tag("/\\"), tag("&")))), formula2), |fs| {
+        Formula::Conj(fs)
+    })(input)
+}
+
+fn atom2(input: &str) -> IResult<&str, Formula> {
+    map(eqterm2, |eqt| Formula::Atom(eqt))(input)
+}
+
+fn formula2(input: &str) -> IResult<&str, Formula> {
+    ws(alt((
+        delimited(tag("("), formula2, tag(")")),
+        alt((forall2, conj2, atom2)),
+    )))(input)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
