@@ -53,11 +53,11 @@ function pickerbox(select){
 }
 window.onload = () => {
     urlParams = new URLSearchParams(window.location.search);
-    myParam = urlParams.get('example');
+    url_eaxmple = urlParams.get('example');
 
     picker = document.getElementById("examplepicker")
-    if(myparam != null){
-        picker.value = myParam;
+    if(url_eaxmple != null){
+        picker.value = url_eaxmple;
     }
     pickerbox(picker)
 
