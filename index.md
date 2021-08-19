@@ -51,7 +51,18 @@ function pickerbox(select){
 
     xhr.send(null);
 }
-window.onload = () => {pickerbox(document.getElementById("examplepicker"))}
+window.onload = () => {
+    urlParams = new URLSearchParams(window.location.search);
+    myParam = urlParams.get('example');
+
+    picker = document.getElementById("examplepicker")
+    if(myparam != null){
+        picker.value = myParam;
+    }
+    pickerbox(picker)
+
+    
+    }
 </script>
 
 <textarea id="query" rows="20" style="width:100%">
@@ -65,6 +76,7 @@ window.onload = () => {pickerbox(document.getElementById("examplepicker"))}
   <option value="arith.pl">Arithmetic</option>
   <option value="cat1.pl">Pullback of Monic is Monic</option>
   <option value="id_unique.pl">Uniqueness of Identity</option>
+  <option value="pb_compose.pl">Composition of Pullbacks</option>
 </select>
 <textarea id="result" rows="20" style="width:100%"> </textarea>
 

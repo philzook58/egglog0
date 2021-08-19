@@ -2,6 +2,9 @@
 appendix axiosms.
 
 
+theta cells are kind of like unfold/cons
+nats = cons(0, nats1 + 1)
+where everything has been stream lifted. so +1 is really map (+1)
 */
 A = T :- theta(L, A, T) = T.
 apply(F, ite(C,A,B)) <-> ite(C,apply(F,A),apply(F,B)).
