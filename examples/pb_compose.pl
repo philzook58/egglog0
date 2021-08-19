@@ -1,10 +1,11 @@
 /* https://proofwiki.org/wiki/Pullback_Lemma
-  https://ncatlab.org/nlab/show/pasting+law+for+pullbacks
+   https://ncatlab.org/nlab/show/pasting+law+for+pullbacks
   
  */
 
+/* Standard categorical definitions */
 type(id(A)) = hom(A,A) :- ob = type(A). 
-/* ob = type(A) is probabnly slightly more efficient to search for than type(A) = ob */
+
 F <- comp(id(A), F).
 F <- comp(F, id(A)).
 
@@ -16,19 +17,19 @@ comp(F,comp(G,H)) <-> comp(F,G,H).
 /* Composition exists if types work out */
 type(comp(F,G)) = hom(A,C) :- hom(A,B) = type(F), hom(B,C) = type(G).
 
+/* Pullback definitions */
 /* pullback is square */
 comp(H,F) = comp(K,G) :- pullback(F,G,H,K).
 
-
-/* universal morphism exists. triangles 
-is univ a function of H1 K1?
+/* universal morphism exists. Triangles commute
+TODO: is univ a function of H1 K1?
 */
 comp(univ(F,G,H,K),H1) = H,
 comp(univ(F,G,H,K),K1) = K,
 type(univ(F,G,H,K)) = hom(Z,E)
 :- pullback(F,G,H1,K1), comp(H,F) = comp(K,G), type(F) = hom(A,B), type(H) = hom(Z,A), type(H1) = hom(E,A).
 
-/* unique */
+/* uniqueness of universal morphism */
 univ(F,G,H,K) = U :- pullback(F,G,H1,K1), comp(H,F) = comp(K,G), H = comp(U,H1), K = comp(U,K1).
 
 
@@ -40,7 +41,8 @@ F |      | K      Q
   c <-G -b   J   e
 */
 
-/* ideally users don't have to fill out this table.
+/* 
+Ideally users don't have to fill out this table.
 It is obnoxious, obvious, and error prone.
 */
 type(a) = ob.
@@ -66,19 +68,15 @@ pullback(k,j,p,q).
 
 /*
 Is big square a pullback?
-1. Easy mode: does it commute:
+In some world it would be nice to reuse the above definition. I don't know how to do this
 
-I need to insert the convenient notation. 
-I should just make it bidirectional.
-Did increase the node count by quite a bit
-comp(p,h,f).
-comp(q,j,g).
+1. Does the square commute?
 */
 ?- comp(p,h,f) = comp(q,j,g).
 
-/*
-2: Given another square
 
+/*
+2: Given another square, is there a morphism that makes the triangles commute
 */
 
 /*
@@ -97,7 +95,10 @@ comp(r,f) = comp(w,j,g). /* is square */
 ?- comp(U,p,h) = r.
 ?- comp(U,q) = w.
 
-/* and it is unique 
+/* 3: and it is unique?
+
+Some questions here about how to phrase this.
+
 Is this right? or am I positing that the require morphism already exists with this?
 I think the uniqueness of the eclass actually might do it.
 That's interesting.
