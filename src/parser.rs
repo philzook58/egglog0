@@ -213,12 +213,21 @@ fn forall2(input: &str) -> IResult<&str, Formula> {
         ws(tag("forall")),
         alphanumeric0 , 
         ws(tag(",")))(input)?;
-    let (input, f) = terminated(formula2, tag(")"))(input)?;
+    let (input, f) = formula2(input)?;
+    Ok((input, Formula::ForAll(v.to_string(), Box::new(f))))
+}
+
+fn exists2(input: &str) -> IResult<&str, Formula> {
+    let (input, v) = delimited(
+        ws(tag("exists")),
+        alphanumeric0 , 
+        ws(tag(",")))(input)?;
+    let (input, f) = formula2(input)?;
     Ok((input, Formula::ForAll(v.to_string(), Box::new(f))))
 }
 
 fn conj2(input: &str) -> IResult<&str, Formula> {
-    map(separated_list1(ws(alt((tag(","), tag("/\\"), tag("&")))), formula2), |fs| {
+    map(separated_list1(ws(alt((tag(","), tag("/\\"), tag("&")))), formula2simp), |fs| {
         Formula::Conj(fs)
     })(input)
 }
@@ -227,16 +236,46 @@ fn atom2(input: &str) -> IResult<&str, Formula> {
     map(eqterm2, |eqt| Formula::Atom(eqt))(input)
 }
 
+fn implies2(input: &str) -> IResult<&str, Formula> {
+    let (input, (h,c)) = tuple( (formula2 , preceded( ws(tag("=>")), formula2)) )(input)?;
+    Ok((input, Formula::Implies(Box::new(h),Box::new(c))))
+}
+
 fn formula2(input: &str) -> IResult<&str, Formula> {
     ws(alt((
         delimited(tag("("), formula2, tag(")")),
-        alt((forall2, conj2, atom2)),
-    )))(input)
+        forall2, conj2)),
+    )(input)
+}
+fn formula2simp(input: &str) -> IResult<&str, Formula> {
+    ws(alt((
+        delimited(tag("("), formula2, tag(")")),
+        forall2, atom2)),
+    )(input)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use Formula::*;
+    #[test]
+    fn parser2_test(){
+
+        let f = "f".to_string();
+        let x = Apply("x".to_string(), vec![]);
+
+        assert_eq!(term2("(f x)").unwrap().1,  Apply(f.clone(), vec![x.clone()]) );
+
+        assert_eq!(term2(" f x  ").unwrap().1,  Apply(f.clone(), vec![x.clone()]) );
+        assert_eq!(eqterm2(" f x  ").unwrap().1,  Bare(Apply(f.clone(), vec![x.clone()]) ));
+        assert_eq!(atom2(" f x  ").unwrap().1,  Atom(Bare(Apply(f.clone(), vec![x.clone()]) )));
+        assert!(forall2(" f x  ").is_err());
+        //assert!(conj2(" f x  ").is_err());
+        
+        assert_eq!(formula2(" f x  ").unwrap().1,  Conj(vec![Atom(Bare(Apply(f.clone(), vec![x.clone()]) ))]));
+
+        //assert_eq!(formula2("(f x)").unwrap().1,  Atom( Bare(Apply(f, vec![x]) ) ));
+    }
     #[test]
     fn it_works() {
         let f = "f".to_string();

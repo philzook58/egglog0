@@ -23,7 +23,7 @@ plus(X,plus(Y,Z)) <-> plus(plus(X,Y),Z).
 fiz(baz) <- bar(boo), x = z.
 
 
-/* Query equalities. Ground queries (no variables) only at the moment.
+/* Queries
 Note that this does NOT insert into the egraph. Should I change that? Or give a new notation for "insert all subterms and then query"?
  */
 ?- f(x) = x.
@@ -32,7 +32,7 @@ Note that this does NOT insert into the egraph. Should I change that? Or give a 
 ?- plus(p,r) = plus(r,p).
 ?- junk(boo) = otherjunk(baz).
 
-/* Query simplification */
+/* Query with variables. */
 f(f(f(f(x)))).
 ?-  f(f(f(f(x)))) = X.
 

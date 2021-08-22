@@ -58,3 +58,4 @@ Note: I started modifying egg a bit. I exposed the Subst datatypes field.
 - [ ] faster multipattern via compilation
 - [ ] integerate analysis?
 - [ ] gensym
+- [ ] serialize the egraph
