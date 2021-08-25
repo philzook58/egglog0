@@ -3,10 +3,11 @@ use crate::*;
 // G and D formula? My intend is for this to be query formula for the moment.
 #[derive(Debug, PartialEq)]
 pub enum Formula {
-    Implies(Box<Formula>, Box<Formula>),
+    Impl(Box<Formula>, Box<Formula>),
     Conj(Vec<Formula>),
-    ForAll(String, Box<Formula>),
-    Exists(String, Box<Formula>),
+    Disj(Vec<Formula>),
+    ForAll(Vec<String>, Box<Formula>),
+    Exists(Vec<String>, Box<Formula>),
     Atom(EqWrap<Term>),
 }
 

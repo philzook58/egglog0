@@ -44,7 +44,7 @@ fn query(input: &str) -> IResult<&str, Entry> {
 fn forall(input: &str) -> IResult<&str, Formula> {
     let (input, v) = preceded(tag("forall("), alphanumeric0)(input)?;
     let (input, f) = terminated(formula, tag(")"))(input)?;
-    Ok((input, Formula::ForAll(v.to_string(), Box::new(f))))
+    Ok((input, Formula::ForAll(vec![v.to_string()], Box::new(f))))
 }
 
 fn conj(input: &str) -> IResult<&str, Formula> {
@@ -187,6 +187,7 @@ where
 
 /*
 I could redesign it so that variables must be bound.
+
 */
 fn apply2(input: &str) -> IResult<&str, Term> {
     let (input, head) = terminated(alphanumeric1, multispace0)(input)?;
@@ -194,6 +195,147 @@ fn apply2(input: &str) -> IResult<&str, Term> {
     Ok((input, Apply(head.to_string(), body)))
 }
 
+
+
+fn forall2(input: &str) -> IResult<&str, Formula> {
+    let (input, v) = delimited(
+        ws(tag("forall")),
+        alphanumeric0 , 
+        ws(tag(",")))(input)?;
+    let (input, f) = formula2(input)?;
+    Ok((input, Formula::ForAll(vec![v.to_string()], Box::new(f))))
+}
+
+fn exists2(input: &str) -> IResult<&str, Formula> {
+    let (input, v) = delimited(
+        ws(tag("exists")),
+        alphanumeric0 , 
+        ws(tag(",")))(input)?;
+    let (input, f) = formula2(input)?;
+    Ok((input, Formula::ForAll(vec![v.to_string()], Box::new(f))))
+}
+
+//existsunique 
+fn disj2(input: &str) -> IResult<&str, Formula> {
+    map(separated_list1(ws(tag("\\/")), formula2simp), |fs| {
+        Formula::Disj(fs)
+    })(input)
+}
+
+fn conj2(input: &str) -> IResult<&str, Formula> {
+    map(separated_list1(ws(tag("/\\")), formula2simp), |fs| {
+        Formula::Conj(fs)
+    })(input)
+}
+
+fn primform(input: &str) -> IResult<&str, Formula> {
+    alt( (delimited(tag("("), form, tag(")")), atom2 ))(input)
+}
+
+fn conjform(input: &str) -> IResult<&str, Formula> {
+    map(separated_list1(ws(tag("/\\")), primform), |mut fs| {
+        if fs.len() == 1{
+            fs.remove(0)
+        }
+        else{
+        Formula::Conj(fs)
+        }
+    })(input)
+}
+fn disjform(input: &str) -> IResult<&str, Formula> {
+    map(separated_list1(ws(tag("\\/")), conjform), |mut fs| {
+        if fs.len() == 1{
+            fs.remove(0)
+        }
+        else{
+        Formula::Disj(fs)
+        }
+    })(input)
+}
+
+fn implform(input: &str) -> IResult<&str, Formula> {
+    map(separated_list1(ws(tag("=>")), disjform), |fs| {
+        let mut iter = fs.into_iter().rev();
+        let mut f = iter.next().unwrap(); // since seperatedlist1 we can just unwrap
+        for f1 in iter{
+            f = Formula::Impl(Box::new(f1), Box::new(f));
+        }
+        f
+    })(input)
+}
+
+fn quantifier(input: &str) -> IResult<&str, Formula> {
+    let (input, q) = alt(( 
+        value(Formula::ForAll as fn(Vec<String>,Box<Formula>) -> Formula, tag("forall")), 
+        // fn(_,_) -> _ also works
+        //more cryptic or not? Function pointer casting https://stackoverflow.com/questions/27895946/expected-fn-item-found-a-different-fn-item-when-working-with-function-pointer
+        value(Formula::Exists as fn(Vec<String>,Box<Formula>) -> Formula, tag("exists")),
+    ))(input)?;
+    let (input, args) = terminated(ws(separated_list1(multispace1, alphanumeric1)), tag(","))(input)?;
+    let (input, f) = form(input)?;
+    Ok((input, q(args.iter().map(|s| s.to_string()).collect(), Box::new(f))))
+}
+
+fn form(input: &str) -> IResult<&str, Formula> {
+    ws(alt((quantifier, implform)))(input)
+}
+/*
+fn conjform(input: &str) -> IResult<&str, Formula> {
+    let (input, (atom, rest)) = tuple((atom2, preceded(ws(tag("/\\")), alt((parensform, conjform)))))(input)?;
+    Ok((input, Formula::Conj(vec![atom,rest] )))
+}
+
+fn disjform(input: &str) -> IResult<&str, Formula> {
+    let (input, (f, rest)) = tuple((conjform, preceded(ws(tag("\\/")), alt((parensform, disjform)))))(input)?;
+    Ok((input, Formula::Disj(vec![f,rest] )))
+}
+
+// really we want it to associate to the right.
+fn implform(input: &str) -> IResult<&str, Formula> {
+    let (input, (f, rest)) = tuple((disjform, preceded(ws(tag("=>")), alt((parensform, implform)))))(input)?;
+    Ok((input, Formula::Implies(Box::new(f),Box::new(rest) )))
+}
+
+fn parensform(input: &str) -> IResult<&str, Formula> {
+    ws(delimited(tag("("), topform, tag(")")))(input)
+}
+
+fn topform(input: &str) -> IResult<&str, Formula> {
+    ws(alt((
+        parensform,
+        forall2, implform)),
+    )(input)
+}
+
+fn connective(input: &str) -> IResult<&str, impl Fn(Formula,Formula) -> Formula> {
+    ws(alt((
+        value( |a, b| {Formula::Conj(vec![a,b]) }, tag("/\\")),
+        value( |a, b| {Formula::Disj(vec![a,b]) }, tag("\\/")),
+        value( |a, b| {Formula::Implies(Box::new(a),Box::new(b))}, tag("=>"))
+    )))(input)
+}
+*/
+/*
+
+forall x,  => yada.
+forall x, => yada.
+
+-------------------- `--` starts a comment line?
+|- something.   thi is query syntax
+|- something.
+
+*/
+/*
+fn factorform(input: &str) -> IResult<&str, Formula> {
+     // parens 
+     let (input,head) = atom2(input)?;
+     let (input, x) = opt( tuple((connective, factorform )))(input)?;
+     match x {
+         None => Ok((input,head)),
+         Some((con, rest)) => Ok((input, con(head,rest)))
+     }
+}
+*/
 fn term2(input: &str) -> IResult<&str, Term> {
     ws(alt((delimited(tag("("), term2, tag(")")), var, apply2)))(input)
 }
@@ -208,37 +350,13 @@ fn eqterm2(input: &str) -> IResult<&str, EqWrap<Term>> {
     )(input)
 }
 
-fn forall2(input: &str) -> IResult<&str, Formula> {
-    let (input, v) = delimited(
-        ws(tag("forall")),
-        alphanumeric0 , 
-        ws(tag(",")))(input)?;
-    let (input, f) = formula2(input)?;
-    Ok((input, Formula::ForAll(v.to_string(), Box::new(f))))
-}
-
-fn exists2(input: &str) -> IResult<&str, Formula> {
-    let (input, v) = delimited(
-        ws(tag("exists")),
-        alphanumeric0 , 
-        ws(tag(",")))(input)?;
-    let (input, f) = formula2(input)?;
-    Ok((input, Formula::ForAll(v.to_string(), Box::new(f))))
-}
-
-fn conj2(input: &str) -> IResult<&str, Formula> {
-    map(separated_list1(ws(alt((tag(","), tag("/\\"), tag("&")))), formula2simp), |fs| {
-        Formula::Conj(fs)
-    })(input)
-}
-
 fn atom2(input: &str) -> IResult<&str, Formula> {
     map(eqterm2, |eqt| Formula::Atom(eqt))(input)
 }
 
 fn implies2(input: &str) -> IResult<&str, Formula> {
     let (input, (h,c)) = tuple( (formula2 , preceded( ws(tag("=>")), formula2)) )(input)?;
-    Ok((input, Formula::Implies(Box::new(h),Box::new(c))))
+    Ok((input, Formula::Impl(Box::new(h),Box::new(c))))
 }
 
 fn formula2(input: &str) -> IResult<&str, Formula> {
@@ -250,9 +368,16 @@ fn formula2(input: &str) -> IResult<&str, Formula> {
 fn formula2simp(input: &str) -> IResult<&str, Formula> {
     ws(alt((
         delimited(tag("("), formula2, tag(")")),
-        forall2, atom2)),
+        atom2, conj2, disj2, implies2, forall2, exists2)),
     )(input)
 }
+
+
+//https://coq.inria.fr/refman/language/coq-library.html
+// ->  <->  \/ /\ ~ =
+//alt((eqterm, conj, disj, implies, forall, exists ))
+
+
 
 #[cfg(test)]
 mod tests {
