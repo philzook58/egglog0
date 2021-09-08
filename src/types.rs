@@ -50,7 +50,7 @@ impl fmt::Display for GroundTerm {
 }
 
 // toplevel of term is eq only
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum EqWrap<T> {
     Eq(T, T),
     Bare(T),
@@ -83,6 +83,16 @@ pub enum Directive {
     Include(String),
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Formula {
+    Impl(Box<Formula>, Box<Formula>),
+    Conj(Vec<Formula>),
+    Disj(Vec<Formula>),
+    ForAll(Vec<String>, Box<Formula>),
+    Exists(Vec<String>, Box<Formula>),
+    Atom(EqWrap<Term>),
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Entry {
     Clause(Vec<EqWrap<Term>>, Vec<EqWrap<Term>>),
@@ -91,8 +101,9 @@ pub enum Entry {
     BiRewrite(Term, Term),
     Directive(Directive),
     Query(Vec<EqWrap<Term>>), // Should I only allow GroundTerm queries?
+    Axiom(String, Formula),
+    Goal(Formula),
 }
-
 
 /* enum Directive {
 NodeLimit,
@@ -133,9 +144,18 @@ fn recexpr_of_groundterm_aux(expr: &mut RecExpr<SymbolLang>, t: &GroundTerm) -> 
         .collect();
     expr.add(SymbolLang::new(t.head.clone(), expr_args))
 }
-pub fn recexpr_of_groundterm(t: &GroundTerm) -> Id {
+
+pub fn recexpr_of_groundterm(t: &GroundTerm) -> RecExpr<SymbolLang> {
     let mut expr = RecExpr::default();
-    recexpr_of_groundterm_aux(&mut expr, t)
+    recexpr_of_groundterm_aux(&mut expr, t);
+    expr
+}
+
+pub fn pattern_of_eqterm(t : &EqWrap<Term>) -> EqWrap<Pattern<SymbolLang>> {
+    match t {
+        EqWrap::Bare(x) => EqWrap::Bare(pattern_of_term(x)),
+        EqWrap::Eq(x,y) => EqWrap::Eq(pattern_of_term(x), pattern_of_term(y)),
+    }
 }
 /*
 fn pattern_of_term(t : &Term) -> Pattern<SymbolLang> {

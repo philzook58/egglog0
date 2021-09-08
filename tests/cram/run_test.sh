@@ -1,0 +1,1 @@
+cargo run  --manifest-path "$TESTDIR/../../Cargo.toml" --quiet "$TESTDIR/../../examples/$1" 2>/dev/null

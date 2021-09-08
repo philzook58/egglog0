@@ -19,6 +19,12 @@ use clap::{AppSettings, Clap};
 struct Opts {
     /// Path of Egglog file to run
     filename: Option<String>,
+    /// Turn off verbosity TODO
+    #[clap(short, long)]
+    verbose: bool, // quiet?
+    /// Output graphical representation TODO
+    #[clap(short, long)]
+    graph: Option<String>,
 }
 
 use rustyline::error::ReadlineError;
@@ -26,7 +32,7 @@ use rustyline::Editor;
 
 fn repl() {
     let mut rl = Editor::<()>::new();
-    let mut env = Env::default();
+    let mut prog = Program::default();
     println!(
         "\
     Egglog - Philip Zucker <philzook58@gmail.com> 2021\n\
@@ -41,7 +47,7 @@ fn repl() {
                 match parse_file(line) {
                     Ok(entries) => {
                         for entry in entries {
-                            process_entry(&mut env, entry);
+                            process_entry_prog(&mut prog, entry);
                         }
                     }
                     Err(e) => {

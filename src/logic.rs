@@ -1,15 +1,30 @@
-
 use crate::*;
 // G and D formula? My intend is for this to be query formula for the moment.
-#[derive(Debug, PartialEq)]
-pub enum Formula {
-    Impl(Box<Formula>, Box<Formula>),
-    Conj(Vec<Formula>),
-    Disj(Vec<Formula>),
-    ForAll(Vec<String>, Box<Formula>),
-    Exists(Vec<String>, Box<Formula>),
-    Atom(EqWrap<Term>),
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Mode {
+    Axiom(Formula),
+    Goal(Formula),
 }
+
+/*
+There are multiple approaches.
+Try to trasnform the formula into something better.
+Skolemize,
+Also backwards chaining queries
+
+Compiles formula into prolog based synatx/ Clauses and Queries.
+Compile time gensyms.
+Introduce the necessary
+Could make Mode just another entry in Entry.
+It would be useful to get to use all kinds of rules.
+I'd need to make thevoriginal parser whitespace capable.
+
+
+fn form_to_rewrite(f : &Formula) -> {
+
+}
+*/
 
 enum GoalFormula {
     ForAll(String, Box<GoalFormula>), // Introduce fresh variable.
@@ -18,14 +33,14 @@ enum GoalFormula {
     Conj(Vec<GoalFormula>), // we can normalize to disj of conj form? Also we could just build out the matching language.
     Disj(Vec<GoalFormula>),
     Implies(ProgramFormula, Box<GoalFormula>),
-    Atom(EqWrap<Term>)
+    Atom(EqWrap<Term>),
 }
 
 enum PatternFormula {
     Conj(Vec<PatternFormula>),
     Disj(Vec<PatternFormula>),
     Exists(String, Box<PatternFormula>),
-    Atom(EqWrap<Term>)
+    Atom(EqWrap<Term>),
 }
 
 // Perhaps if I'm willing to accept higher order appliers that insert into the rule set
@@ -33,7 +48,7 @@ enum PatternFormula {
 enum ApplierFormula {
     Conj(Vec<ApplierFormula>),
     Exists(String, Box<ApplierFormula>), // gensym semantics. in context of all foralls?
-    Atom(EqWrap<Term>)
+    Atom(EqWrap<Term>),
 }
 
 type AtomicFormula = EqWrap<Term>;
@@ -41,15 +56,14 @@ type AtomicFormula = EqWrap<Term>;
 // is programformula the same as applierformula and goalformula the same as patternformual
 
 enum ProgramFormula {
- /*   Implies(PatternFormula, ProgramFormula ),
+    /*   Implies(PatternFormula, ProgramFormula ),
     //Forall(String, Box<ProgramFormula> ), // No not fine. foo(X,Y,Z) needs to be disallowed.
     Apply(ApplierFormula)
     Conj(Box<ProgramFormula>, Box<ProgramFormula>),
     // Exists // gensym semantics? exists a b c, foo(a,b,c). seems fine.
     // ForallBounded? it's like forall x : [0..10], or something. we need to know where to pull from
     ForAllScoped( Vec<String>, PatternFormula, ApplierFormula) // Requires a pattern formula that contains all the variables.
-*/
-}
+*/}
 /*
 ConjPattern = MultiPattern<>
 DisjPattern = OrPattern<>

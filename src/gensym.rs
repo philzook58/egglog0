@@ -6,7 +6,7 @@ fn fresh() -> usize {
     GENSYM_COUNTER.fetch_add(1, Ordering::SeqCst)
 }
 
-fn gensym(prefix : &str) -> String {
+fn gensym(prefix: &str) -> String {
     format!("#{}#{}", prefix, fresh())
 }
 
@@ -15,8 +15,8 @@ mod tests {
     use super::*;
     #[test]
     fn it_works2() {
-        assert_eq!(fresh() , 0);
-        assert_eq!(fresh() , 1);
-        assert_eq!(gensym("fred") , "#fred#2");
+        assert_eq!(fresh(), 0);
+        assert_eq!(fresh(), 1);
+        assert_eq!(gensym("fred"), "#fred#2");
     }
 }
