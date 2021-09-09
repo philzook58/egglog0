@@ -1,5 +1,4 @@
 use crate::*;
-use logic::*;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until},
@@ -105,7 +104,7 @@ fn file(input: &str) -> IResult<&str, Vec<Entry>> {
     //many0(alt((entry, map(pinline_comment, )))(input)
 }
 
-pub fn parse_file(mut input: String) -> Result<Vec<Entry>, String> {
+pub fn parse_file(input: String) -> Result<Vec<Entry>, String> {
     // input.retain(|c| !c.is_whitespace());
     match file(&input) {
         Ok((rem, f)) => {

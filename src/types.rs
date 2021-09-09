@@ -151,10 +151,10 @@ pub fn recexpr_of_groundterm(t: &GroundTerm) -> RecExpr<SymbolLang> {
     expr
 }
 
-pub fn pattern_of_eqterm(t : &EqWrap<Term>) -> EqWrap<Pattern<SymbolLang>> {
+pub fn pattern_of_eqterm(t: &EqWrap<Term>) -> EqWrap<Pattern<SymbolLang>> {
     match t {
         EqWrap::Bare(x) => EqWrap::Bare(pattern_of_term(x)),
-        EqWrap::Eq(x,y) => EqWrap::Eq(pattern_of_term(x), pattern_of_term(y)),
+        EqWrap::Eq(x, y) => EqWrap::Eq(pattern_of_term(x), pattern_of_term(y)),
     }
 }
 /*

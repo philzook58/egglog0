@@ -2,11 +2,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 static GENSYM_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-fn fresh() -> usize {
+pub fn fresh() -> usize {
     GENSYM_COUNTER.fetch_add(1, Ordering::SeqCst)
 }
 
-fn gensym(prefix: &str) -> String {
+pub fn gensym(prefix: &str) -> String {
     format!("#{}#{}", prefix, fresh())
 }
 

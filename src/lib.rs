@@ -43,7 +43,7 @@ fn merge_substs(substs1: &Vec<Subst>, substs2: &Vec<Subst>) -> Vec<Subst> {
     substs
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 struct MultiPattern<S> {
     patterns: Vec<S>,
 }
@@ -339,6 +339,7 @@ fn load_file(env: &mut Env, filename: &str) -> Result<(), String> {
 */
 
 use std::collections::HashSet;
+#[derive(Debug, PartialEq, Clone)]
 struct Env2 {
     freshvars: HashSet<String>, // forall x adds into this set
     metavars: HashSet<String>,  // exists x add into this set.
@@ -354,7 +355,7 @@ impl Env2 {
     }
 }
 
-fn interp_term(env: &mut Env2, t: &Term) -> Term {
+fn interp_term(env: &Env2, t: &Term) -> Term {
     match t {
         Var(x) => panic!("Impossible"), // should parse formula at groundterms.
         Apply(f, args) => {
@@ -370,14 +371,14 @@ fn interp_term(env: &mut Env2, t: &Term) -> Term {
     }
 }
 
-fn interp_eqwrap(env: &mut Env2, t: &EqWrap<Term>) -> EqWrap<Term> {
+fn interp_eqwrap(env: &Env2, t: &EqWrap<Term>) -> EqWrap<Term> {
     match t {
         Eq(a, b) => Eq(interp_term(env, a), interp_term(env, b)),
         Bare(a) => Bare(interp_term(env, a)),
     }
 }
 
-fn interp_term_goal(env: &mut Env2, t: &Term) -> Term {
+fn interp_term_goal(env: &Env2, t: &Term) -> Term {
     match t {
         Var(x) => panic!("Impossible"),
         Apply(f, args) => {
@@ -393,7 +394,7 @@ fn interp_term_goal(env: &mut Env2, t: &Term) -> Term {
     }
 }
 
-fn interp_eqwrap_goal(env: &mut Env2, t: &EqWrap<Term>) -> EqWrap<Term> {
+fn interp_eqwrap_goal(env: &Env2, t: &EqWrap<Term>) -> EqWrap<Term> {
     match t {
         Eq(a, b) => Eq(interp_term_goal(env, a), interp_term_goal(env, b)),
         Bare(a) => Bare(interp_term_goal(env, a)),
@@ -402,21 +403,21 @@ fn interp_eqwrap_goal(env: &mut Env2, t: &EqWrap<Term>) -> EqWrap<Term> {
 use Formula::*;
 // We shouldn't be using mutable envs. What am I thinking?
 
-
 /*
 More imperative style to a program?
 enum SearchProgram {
     Run,
-    Clear,   
+    Clear,
 }
 */
 
 // Module?
+#[derive(Debug, Clone)]
 pub struct Program {
     // eqfacts and facts, or just duplicate for base facts?
-    facts : Vec<(RecExpr<SymbolLang>, RecExpr<SymbolLang>)>,
-    rules : Vec<egg::Rewrite<SymbolLang, ()>>,
-    queries : Vec<MultiPattern<EqWrap<Pattern<SymbolLang>>>>
+    facts: Vec<(RecExpr<SymbolLang>, RecExpr<SymbolLang>)>,
+    rules: Vec<egg::Rewrite<SymbolLang, ()>>,
+    queries: Vec<MultiPattern<EqWrap<Pattern<SymbolLang>>>>,
 }
 
 impl Default for Program {
@@ -431,15 +432,15 @@ impl Default for Program {
 
 pub fn process_entry_prog(prog: &mut Program, entry: Entry) {
     match entry {
-        Directive(types::Directive::Include(filename)) => (), // load_file(state, &filename).unwrap(), 
+        Directive(types::Directive::Include(filename)) => (), // load_file(state, &filename).unwrap(),
         Fact(Eq(a, b)) => {
             let a = recexpr_of_groundterm(&a);
             let b = recexpr_of_groundterm(&b);
-            prog.facts.push(  ( a,b )  )
+            prog.facts.push((a, b))
         }
         Fact(Bare(a)) => {
             let a = recexpr_of_groundterm(&a);
-            prog.facts.push(  ( a.clone(),a )  )
+            prog.facts.push((a.clone(), a))
         }
         Clause(head, body) => {
             let body = body
@@ -466,8 +467,10 @@ pub fn process_entry_prog(prog: &mut Program, entry: Entry) {
         BiRewrite(a, b) => {
             let a = pattern_of_term(&a);
             let b = pattern_of_term(&b);
-            prog.rules.push(egg::Rewrite::new(format!("{}->{}", a, b), a.clone(), b.clone()).unwrap());
-            prog.rules.push(egg::Rewrite::new(format!("{}->{}", b, a), b, a).unwrap());
+            prog.rules
+                .push(egg::Rewrite::new(format!("{}->{}", a, b), a.clone(), b.clone()).unwrap());
+            prog.rules
+                .push(egg::Rewrite::new(format!("{}->{}", b, a), b, a).unwrap());
         }
         Rewrite(a, b, body) => {
             let applier = pattern_of_term(&a);
@@ -487,99 +490,238 @@ pub fn process_entry_prog(prog: &mut Program, entry: Entry) {
                 conditions.iter().all(|c| c.check(egraph, eclass, subst))
             };
             let applier = ConditionalApplier { condition, applier };
-            prog.rules.push(egg::Rewrite::new(format!("{} -{:?}> {}", b, body, a), b, applier).unwrap());
+            prog.rules
+                .push(egg::Rewrite::new(format!("{} -{:?}> {}", b, body, a), b, applier).unwrap());
         }
         Query(qs) => {
-            let qs = qs
-                .iter()
-                .map(pattern_of_eqterm)
-                .collect();
+            let qs = qs.iter().map(pattern_of_eqterm).collect();
             prog.queries.push(MultiPattern { patterns: qs });
         }
         Axiom(_name, f) => interp_formula(prog, &mut Env2::new(), f), // I should use the name
-        Goal(f) => interp_goal(prog, &mut Env2::new(), f)
+        Goal(f) => interp_goal(prog, &mut Env2::new(), f),
     }
 }
 
-
 fn run_program2(prog: &Program) -> Vec<Vec<Subst>> {
-    let mut runner = Runner::default()
+    let runner = Runner::default()
         .with_iter_limit(30)
         .with_node_limit(10_000)
         .with_time_limit(Duration::from_secs(5));
-    let (runner, res) = run_program(prog, runner);
+    let (_runner, res) = run_program(prog, runner);
     res
 }
 
-fn run_program(prog: &Program, mut runner : Runner<SymbolLang,()>) -> (Runner<SymbolLang,()>, Vec<Vec<Subst>>)  {
+fn run_program(
+    prog: &Program,
+    mut runner: Runner<SymbolLang, ()>,
+) -> (Runner<SymbolLang, ()>, Vec<Vec<Subst>>) {
     let egraph = &mut runner.egraph;
-    for (a,b) in &prog.facts {
-        let a_id = egraph.add_expr(&a); 
+    for (a, b) in &prog.facts {
+        let a_id = egraph.add_expr(&a);
         let b_id = egraph.add_expr(&b);
         egraph.union(a_id, b_id);
     }
     let runner = runner.run(&prog.rules);
-    let res = prog.queries.iter().map(|q| {
-        let matches = q.search(&runner.egraph);
-        matches.into_iter().flat_map(|mat|
-            mat.substs
-        ).collect()
-    }).collect();
+    let res = prog
+        .queries
+        .iter()
+        .map(|q| {
+            let matches = q.search(&runner.egraph);
+            matches.into_iter().flat_map(|mat| mat.substs).collect()
+        })
+        .collect();
     (runner, res)
 }
 
-fn interp_goal(prog : &mut Program, env: &mut Env2, formula: Formula) {
+use std::collections::HashMap;
+fn freshen_formula(vs: Vec<String>, f: &Formula) -> Formula {
+    let mut freshmap = HashMap::new();
+    for v in &vs {
+        freshmap.insert(v.clone(), gensym::gensym(&v));
+    }
+    fn freshen_term(freshmap: &HashMap<String, String>, vs: &Vec<String>, t: &Term) -> Term {
+        match t {
+            Var(x) => Var(x.clone()),
+            Apply(f, args) => {
+                if args.len() == 0 {
+                    if vs.contains(f) {
+                        Apply(freshmap.get(f).unwrap().clone(), vec![])
+                    } else {
+                        Apply(f.clone(), vec![])
+                    }
+                } else {
+                    Apply(
+                        f.clone(),
+                        args.iter()
+                            .map(|arg| freshen_term(freshmap, vs, arg))
+                            .collect(),
+                    )
+                }
+            }
+        }
+    }
+    fn worker(fm: &HashMap<String, String>, vs: &Vec<String>, f: &Formula) -> Formula {
+        if vs.len() == 0 {
+            f.clone()
+        } else {
+            match f {
+                Impl(hyp, conc) => Impl(
+                    Box::new(worker(fm, vs, &*hyp)),
+                    Box::new(worker(fm, vs, &*conc)),
+                ),
+                Conj(fs) => Conj(fs.iter().map(|f| worker(fm, vs, f)).collect()),
+                Disj(fs) => Disj(fs.iter().map(|f| worker(fm, vs, f)).collect()),
+                ForAll(vs2, f) => {
+                    let mut vs = vs.clone();
+                    vs.retain(|v| !vs2.contains(v));
+                    ForAll(vs2.clone(), Box::new(worker(fm, &vs, &*f)))
+                }
+                Exists(vs2, f) => {
+                    let mut vs = vs.clone();
+                    vs.retain(|v| !vs2.contains(v));
+                    Exists(vs2.clone(), Box::new(worker(fm, &vs, &*f)))
+                }
+                Atom(t) => Atom(match t {
+                    Eq(a, b) => Eq(freshen_term(fm, vs, a), freshen_term(fm, vs, b)),
+                    Bare(a) => Bare(freshen_term(fm, vs, a)),
+                }),
+            }
+        }
+    }
+    worker(&freshmap, &vs, f)
+}
+
+fn interp_goal(prog: &mut Program, env: &Env2, formula: Formula) {
     match formula {
         Conj(fs) => {
-            let ps = fs.iter()
+            let ps = fs
+                .iter()
                 .map(|g| match g {
+                    // TODO: How to not insist on Atom here?
+                    // recurse on fresh progs, accumulate all queries into single query.
+                    // (sum of products)
                     Atom(g) => pattern_of_eqterm(&interp_eqwrap_goal(env, g)),
                     _ => panic!("unexpected form in goal"),
                 })
                 .collect();
-            prog.queries.push( MultiPattern {patterns : ps} )
-         }
-        ,
+            prog.queries.push(MultiPattern { patterns: ps })
+        }
         Atom(f) => {
-            let g = MultiPattern {patterns : vec![pattern_of_eqterm(&interp_eqwrap_goal(env, &f))] };
+            let g = MultiPattern {
+                patterns: vec![pattern_of_eqterm(&interp_eqwrap_goal(env, &f))],
+            };
             prog.queries.push(g)
         }
         Exists(vs, f) => {
-            env.metavars.extend(vs);
-            interp_goal(prog, env, *f)
+            let mut env = env.clone();
+            // freshen?
+            env.metavars.extend(vs); // patvars?
+            interp_goal(prog, &env, *f)
         }
-        /*
         Impl(hyp, conc) => {
-            let hyp = interp_formula(env, hyp);
-            let mut conc = interp_goal(env, conc);
-            conc.push(hyp);
-            conc
-        }*/
+            interp_formula(prog, env, *hyp);
+            interp_goal(prog, env, *conc);
+        }
+        ForAll(vs, f) => {
+            let f = freshen_formula(vs, &*f);
+            // freshvars mapping rather than doing eager freshen?
+            interp_goal(prog, env, f);
+        }
         _ => panic!("no other goal"),
     }
 }
 
-
 // I should make env immutable this is not right as is.
 // Or what is even the point of being this fancy
-fn interp_formula(prog : &mut Program, env: &mut Env2, formula: Formula) {
+// Could I implement higher order rules by extending symbollang?
+/*
+P => (Q => R) becomes
+P => x
+x /\ Q => R
+P => (Q => R) should really be P /\ Q => R ?
+
+(P => Q) => R
+
+
+*/
+struct Sequent {
+    hyps : Vec<Formula>,
+    conc : Formula
+    // sig : Vec<String>
+}
+/* The only obligations that can be discharged via egglog are those of the form
+---------------------------------------- (egglog)
+atom, atom, hyp => conc, hyp => conc |- conj(q1,q2,q3), conj() 
+which is indeed the form of a "Program".
+
+enum Proof {
+    LAnd(Int, Box<Proof>, Box<Proof>),
+
+
+}
+*/
+/*
+fn proof(s : Sequent) -> Vec<Program>, Proof {
+    match s.conc {
+        Conj(fs) => fs.map(|conc| proof(Sequent{ s.hyps.clone(), conc})),
+        Disj(_) => fs.map(|conc| ),
+        ForAll(vs,f) => proof(hyps, freshen_formula(vs, f))
+        Impl(hyp,conc) => proof(hyps.push(hyp), conc )
+        Atom() => run_query( hyps, q )
+    }
+}
+
+
+
+fn run_query(hyps, q) {
+    prog = Program::default()
+    while let Some(hyp) = hyps.pop() {
+
+    }
+    for hyp in hyps {
+        match hyp {
+            Atom(f) => prog.facts.push(f)
+            Conj(fs) => hyps.extend(f)  // Left And
+            ForAll(vs, f) => patvarize(vs, f) //| is_prim_rewrite(f) => 
+                          //| otherwise => 
+            Impl(a,b) | is_prim_pat(a) && is_prim_applier(b) => ReWrite
+            Impl(a,b) => proof( other_hyps, a ) and proof(hyps + b, q)
+
+
+        }
+    }
+}
+*/
+
+fn interp_formula(prog: &mut Program, env: &Env2, formula: Formula) {
     match formula {
         Atom(a) => {
-            let e = match interp_eqwrap(env, &a) {
+            match interp_eqwrap(env, &a) {
                 Eq(a, b) => {
                     let a = recexpr_of_groundterm(&is_ground(&a).unwrap());
                     let b = recexpr_of_groundterm(&is_ground(&b).unwrap());
-                    prog.facts.push( (a,b) )
+                    prog.facts.push((a, b))
                 }
                 Bare(a) => {
                     let a = recexpr_of_groundterm(&is_ground(&a).unwrap());
-                    prog.facts.push( (a.clone(),a ))
+                    prog.facts.push((a.clone(), a))
                 }
             };
-            //Fact(e)
-            
+        }
+        Conj(fs) => {
+            for f in fs {
+                interp_formula(prog, env, f);
+            }
         }
         Impl(hyp, conc) => {
+            /*
+            prog = Program::defualt();
+            let prog = interp_goal( prog, env, &hyp  );
+            assert prog.clauses == 0
+            assert prog.facts == 0
+            assert prog.queries.len() == 1
+            Rewrite(prog.queries, prog.
+            */
             let hyps = match *hyp {
                 Atom(hyp) => vec![pattern_of_eqterm(&interp_eqwrap(env, &hyp))],
                 Conj(hyps) => hyps
@@ -592,6 +734,7 @@ fn interp_formula(prog : &mut Program, env: &mut Env2, formula: Formula) {
                 _ => panic!("Invalid hyp {:?}", *hyp),
             };
             // I should be not duplicating code here.
+            // call interp_formula here. assert no queries only facts?
             let concs = match *conc {
                 Atom(conc) => vec![pattern_of_eqterm(&interp_eqwrap(env, &conc))],
                 Conj(concs) => concs
@@ -605,13 +748,16 @@ fn interp_formula(prog : &mut Program, env: &mut Env2, formula: Formula) {
             };
             let searcher = MultiPattern { patterns: hyps };
             let applier = MultiPattern { patterns: concs };
-            prog.rules.push( egg::Rewrite::new("", searcher, applier).unwrap() )
-            // Clause(hyps, concs)
+            prog.rules
+                .push(egg::Rewrite::new("", searcher, applier).unwrap())
         }
-        //Impl(box Atom(hyp), box Atom(conc)) => Clause(vec![interp_eqwrap(env, hyp)] , vec![interp_eqwrap(env, conc)),
+        // Exists in conclusion. Skolemized on freshvars?
+        // We can't allow unguarded exists though.
+        // Nested Programs? swaping facts and queries in some sense?
         ForAll(vs, f) => {
-            env.freshvars.extend(vs);
-            interp_formula(prog, env, *f)
+            let mut env = env.clone();
+            env.freshvars.extend(vs); // patvars?
+            interp_formula(prog, &env, *f)
         }
         _ => panic!("unexpected formula {:?} in interp_formula", formula),
     }
@@ -646,7 +792,6 @@ struct NegPattern<P>{
 
 */
 
-
 use core::time::Duration;
 // Refactor this to return not string.
 fn run_file(file: Vec<Entry>) -> String {
@@ -657,7 +802,7 @@ fn run_file(file: Vec<Entry>) -> String {
         //process_entry(&mut env, entry)
         process_entry_prog(&mut prog, entry)
     }
-    let mut runner = Runner::default()
+    let runner = Runner::default()
         .with_iter_limit(30)
         .with_node_limit(10_000)
         .with_time_limit(Duration::from_secs(5));
@@ -671,12 +816,12 @@ fn run_file(file: Vec<Entry>) -> String {
         //let matches = q.search(&runner.egraph);
         if res.len() == 0 {
             writeln!(buf, "unknown.");
-        } else{
-        for subst in res {
-            print_subst(&mut buf, &runner.egraph, &subst);
-            writeln!(buf, ";");
+        } else {
+            for subst in res {
+                print_subst(&mut buf, &runner.egraph, &subst);
+                writeln!(buf, ";");
+            }
         }
-    }
     }
     buf
 }
