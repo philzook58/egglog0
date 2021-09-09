@@ -645,13 +645,12 @@ P => (Q => R) should really be P /\ Q => R ?
 
 */
 struct Sequent {
-    hyps : Vec<Formula>,
-    conc : Formula
-    // sig : Vec<String>
+    hyps: Vec<Formula>,
+    conc: Formula, // sig : Vec<String>
 }
 /* The only obligations that can be discharged via egglog are those of the form
 ---------------------------------------- (egglog)
-atom, atom, hyp => conc, hyp => conc |- conj(q1,q2,q3), conj() 
+atom, atom, hyp => conc, hyp => conc |- conj(q1,q2,q3), conj()
 which is indeed the form of a "Program".
 
 enum Proof {
@@ -682,8 +681,8 @@ fn run_query(hyps, q) {
         match hyp {
             Atom(f) => prog.facts.push(f)
             Conj(fs) => hyps.extend(f)  // Left And
-            ForAll(vs, f) => patvarize(vs, f) //| is_prim_rewrite(f) => 
-                          //| otherwise => 
+            ForAll(vs, f) => patvarize(vs, f) //| is_prim_rewrite(f) =>
+                          //| otherwise =>
             Impl(a,b) | is_prim_pat(a) && is_prim_applier(b) => ReWrite
             Impl(a,b) => proof( other_hyps, a ) and proof(hyps + b, q)
 
