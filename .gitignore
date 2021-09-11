@@ -2,3 +2,4 @@
 /_site
 /.sass-cache
 /tests/cram/*.orig
+/tests/cram/*.t.err

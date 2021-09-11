@@ -7,7 +7,8 @@ Axiom ax2 : z = y.
 Axiom ax3 : f x.
 Axiom ax4 : bar boo.
 Axiom ax7 : plus p r.
-Axiom ax9 : forall x e, f (f x) = e => e = x.
+Axiom ax9 : forall x e, f (f (f x)) = e => e = x.
+Axiom ax10 : forall x e, f (f x) = e => e = x.
 /* general looking prolog-like rules */
 Axiom fizbo : forall x, f x = q => bar x.
 Axiom fozbo : forall x z, fizzy floozy /\ buppo z  => biz z = baz (biz boz).

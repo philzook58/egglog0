@@ -1,6 +1,6 @@
 use egg::*;
 use std::fmt::Write;
-
+use std::sync::Arc;
 mod gensym;
 mod logic;
 mod types;
@@ -66,9 +66,22 @@ where
 }
 
 impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
-    fn search_eclass(&self, egraph: &EGraph<L, A>, eclass: Id) -> Option<SearchMatches> {
+    fn search_eclass(&self, egraph: &EGraph<L, A>, eclass: Id) -> Option<SearchMatches<L>> {
         match self {
-            Bare(p) => p.search_eclass(egraph, eclass),
+            Bare(p) => p.search_eclass(egraph, eclass)
+                
+               /* match p.search_eclass(egraph, eclass) {
+                    None => None,
+                    Some(matches) => {
+                        Some(SearchMatches {
+                            ast : None,
+                            ..matches
+                        })
+                    }
+                } */
+            
+            
+            ,
             Eq(p1, p2) => {
                 let matches = p1.search_eclass(egraph, eclass)?;
                 let matches2 = p2.search_eclass(egraph, eclass)?;
@@ -76,7 +89,11 @@ impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
                 if substs.len() == 0 {
                     None
                 } else {
-                    Some(SearchMatches { eclass, substs })
+                    Some(SearchMatches {
+                        eclass,
+                        substs,
+                        ast: None,
+                    })
                 }
             }
         }
@@ -94,7 +111,7 @@ impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
 }
 
 impl<L: Language, A: Analysis<L>, P: Searcher<L, A>> Searcher<L, A> for MultiPattern<P> {
-    fn search_eclass(&self, egraph: &EGraph<L, A>, eclass: Id) -> Option<SearchMatches> {
+    fn search_eclass(&self, egraph: &EGraph<L, A>, eclass: Id) -> Option<SearchMatches<L>> {
         let mut iter = self.patterns.iter();
         let firstpat = iter.next()?;
         let searchmatches = firstpat.search_eclass(egraph, eclass)?;
@@ -109,6 +126,7 @@ impl<L: Language, A: Analysis<L>, P: Searcher<L, A>> Searcher<L, A> for MultiPat
         Some(SearchMatches {
             eclass,
             substs: matches,
+            ast: None,
         })
     }
     fn vars(&self) -> Vec<egg::Var> {
@@ -129,18 +147,30 @@ where
     N: Analysis<L>,
     A: Applier<L, N>,
 {
-    fn apply_one(&self, egraph: &mut EGraph<L, N>, eclass: Id, subst: &Subst) -> Vec<Id> {
+    fn apply_one(
+        &self,
+        egraph: &mut EGraph<L, N>,
+        eclass: Id,
+        subst: &Subst,
+        searcher_ast: Option<&PatternAst<L>>,
+        rule_name: Arc<str>,
+    ) -> Vec<Id> {
         let mut added = vec![]; // added are union updates, of which there are none
         for applier in &self.patterns {
-            added.extend(applier.apply_one(egraph, eclass, subst));
+            added.extend(applier.apply_one(egraph, eclass, subst, searcher_ast, rule_name.clone()));
         }
         added
     }
 
-    fn apply_matches(&self, egraph: &mut EGraph<L, N>, matches: &[SearchMatches]) -> Vec<Id> {
+    fn apply_matches(
+        &self,
+        egraph: &mut EGraph<L, N>,
+        matches: &[SearchMatches<L>],
+        rule_name: Arc<str>,
+    ) -> Vec<Id> {
         let mut added = vec![];
         for applier in &self.patterns {
-            added.extend(applier.apply_matches(egraph, matches));
+            added.extend(applier.apply_matches(egraph, matches, rule_name.clone()));
         }
         added
     }
@@ -157,29 +187,58 @@ where
     }
 }
 
-impl<N, L, A> Applier<L, N> for EqWrap<A>
+impl<N, L> Applier<L, N> for EqWrap<Pattern<L>>
 where
     L: Language,
     N: Analysis<L>,
-    A: Applier<L, N>,
 {
-    fn apply_one(&self, _egraph: &mut EGraph<L, N>, _eclass: Id, _subst: &Subst) -> Vec<Id> {
+    fn apply_one(
+        &self,
+        _egraph: &mut EGraph<L, N>,
+        _eclass: Id,
+        _subst: &Subst,
+        searcher_ast: Option<&PatternAst<L>>,
+        rule_name: Arc<str>,
+    ) -> Vec<Id> {
         // self.0.apply_one(egraph, eclass, subst)
         panic!("EqApply.apply_one was called");
     }
 
     // Could copy using apply_pat for better efficiency
-    fn apply_matches(&self, egraph: &mut EGraph<L, N>, matches: &[SearchMatches]) -> Vec<Id> {
+    fn apply_matches(
+        &self,
+        egraph: &mut EGraph<L, N>,
+        matches: &[SearchMatches<L>],
+        rule_name: Arc<str>,
+    ) -> Vec<Id> {
         match self {
-            Bare(a) => a.apply_matches(egraph, matches),
+            Bare(a) => //a.apply_matches(egraph, matches, rule_name)
+            {
+            // Ignoreapply semantics
+            let mut added = vec![];
+            for mat in matches {
+                for subst in &mat.substs {
+                    let ast = a.ast.as_ref();
+                    let mut id_buf = vec![0.into(); ast.len()];
+                    let id = apply_pat(&mut id_buf, ast, egraph, subst);
+                    added.push(id)
+                    // root is just ignored?
+                }
+            }
+            // TODO: REALLY THINK ABOUT THIS!!!!
+            added 
+        }
+            
+            ,
             Eq(l, r) => {
                 let mut added = vec![]; // added are union updates, of which there are none
                 for mat in matches {
                     for subst in &mat.substs {
                         // This should be ok because we know they are patterns. Not very safe.
-                        let id1 = l.apply_one(egraph, 0.into(), subst)[0];
-                        let id2 = r.apply_one(egraph, 0.into(), subst)[0];
-                        let (to, did_something) = egraph.union(id1, id2);
+                        //let id1 = l.apply_one(egraph, 0.into(), subst, None, rule_name)[0];
+                        //let id2 = r.apply_one(egraph, 0.into(), subst, None, rule_name)[0];
+                        let (to, did_something) =
+                            egraph.union_instantiations(&l.ast, &r.ast, subst, rule_name.clone());
                         if did_something {
                             added.push(to)
                         }
@@ -202,6 +261,7 @@ where
     }
 }
 
+/*
 struct EqApply<L> {
     l: Pattern<L>,
     r: Pattern<L>,
@@ -212,19 +272,20 @@ where
     L: Language,
     N: Analysis<L>,
 {
-    fn apply_one(&self, _egraph: &mut EGraph<L, N>, _eclass: Id, _subst: &Subst) -> Vec<Id> {
+    fn apply_one(&self, _egraph: &mut EGraph<L, N>, _eclass: Id, _subst: &Subst, searcher_ast: Option<&PatternAst<L>>,
+        rule_name: Arc<str>) -> Vec<Id> {
         // self.0.apply_one(egraph, eclass, subst)
         panic!("EqApply.apply_one was called");
     }
 
     // Could copy using apply_pat for better efficiency
-    fn apply_matches(&self, egraph: &mut EGraph<L, N>, matches: &[SearchMatches]) -> Vec<Id> {
+    fn apply_matches(&self, egraph: &mut EGraph<L, N>, matches: &[SearchMatches<L>], rule_name: Arc<str>) -> Vec<Id> {
         let mut added = vec![]; // added are union updates, of which there are none
         for mat in matches {
             for subst in &mat.substs {
                 // This should be ok because we know they are patterns. Not very safe.
-                let id1 = self.l.apply_one(egraph, 0.into(), subst)[0];
-                let id2 = self.r.apply_one(egraph, 0.into(), subst)[0];
+                let id1 = self.l.apply_one(egraph, 0.into(), subst, None, rule_name)[0];
+                let id2 = self.r.apply_one(egraph, 0.into(), subst, None, rule_name)[0];
                 let (to, did_something) = egraph.union(id1, id2);
                 if did_something {
                     added.push(to)
@@ -240,6 +301,7 @@ where
         vars
     }
 }
+*/
 
 // Could probably generalize from pattern.
 struct IgnoreApply<L>(Pattern<L>);
@@ -249,16 +311,30 @@ where
     L: Language,
     N: Analysis<L>,
 {
-    fn apply_one(&self, egraph: &mut EGraph<L, N>, eclass: Id, subst: &Subst) -> Vec<Id> {
-        self.0.apply_one(egraph, eclass, subst)
+    fn apply_one(
+        &self,
+        egraph: &mut EGraph<L, N>,
+        eclass: Id,
+        subst: &Subst,
+        searcher_ast: Option<&PatternAst<L>>,
+        rule_name: Arc<str>,
+    ) -> Vec<Id> {
+        self.0
+            .apply_one(egraph, eclass, subst, searcher_ast, rule_name)
     }
 
     // TODO: Could copy using apply_pat from Pattern impl for better efficiency. Need to make it public?
-    fn apply_matches(&self, egraph: &mut EGraph<L, N>, matches: &[SearchMatches]) -> Vec<Id> {
+    fn apply_matches(
+        &self,
+        egraph: &mut EGraph<L, N>,
+        matches: &[SearchMatches<L>],
+        rule_name: Arc<str>,
+    ) -> Vec<Id> {
         // let mut added = vec![]; // added are union updates, of which there are none
         for mat in matches {
             for subst in &mat.substs {
-                self.apply_one(egraph, 0.into(), subst); // root is just ignored?
+                self.apply_one(egraph, 0.into(), subst, None, rule_name.clone());
+                // root is just ignored?
             }
         }
         // TODO: REALLY THINK ABOUT THIS!!!!
@@ -294,7 +370,7 @@ fn print_subst<T: std::fmt::Write>(
             write!(buf, ", {} = {}", k, best)?;
         }
     }
-    write!(buf, "]")
+    writeln!(buf, "];")
 }
 
 type SymMultiPattern = MultiPattern<EqWrap<Pattern<SymbolLang>>>;
@@ -468,12 +544,12 @@ pub fn process_entry_prog(prog: &mut Program, entry: Entry) {
             let a = pattern_of_term(&a);
             let b = pattern_of_term(&b);
             prog.rules
-                .push(egg::Rewrite::new(format!("{}->{}", a, b), a.clone(), b.clone()).unwrap());
+                .push(egg::Rewrite::new(format!("{} -> {}", a, b), a.clone(), b.clone()).unwrap());
             prog.rules
-                .push(egg::Rewrite::new(format!("{}->{}", b, a), b, a).unwrap());
+                .push(egg::Rewrite::new(format!("{} -> {}", b, a), b, a).unwrap());
         }
         Rewrite(a, b, body) => {
-            let applier = pattern_of_term(&a);
+            let a = pattern_of_term(&a);
             let b = pattern_of_term(&b);
             // consider shortcircuiting case where body = []
             let conditions: Vec<_> = body
@@ -483,15 +559,24 @@ pub fn process_entry_prog(prog: &mut Program, entry: Entry) {
                         Eq(a, b) => (pattern_of_term(&a), pattern_of_term(&b)),
                         Bare(a) => (pattern_of_term(&a), pattern_of_term(&a)),
                     };
-                    ConditionEqual(l, r)
+                    ConditionEqual::new(l, r)
                 })
                 .collect();
             let condition = move |egraph: &mut EGraph<_, ()>, eclass: Id, subst: &Subst| {
                 conditions.iter().all(|c| c.check(egraph, eclass, subst))
             };
-            let applier = ConditionalApplier { condition, applier };
-            prog.rules
-                .push(egg::Rewrite::new(format!("{} -{:?}> {}", b, body, a), b, applier).unwrap());
+            let applier = ConditionalApplier {
+                condition,
+                applier: a.clone(),
+            };
+            if body.len() == 0 {
+                prog.rules
+                    .push(egg::Rewrite::new(format!("{} -> {}", b, a), b, applier).unwrap());
+            } else {
+                prog.rules.push(
+                    egg::Rewrite::new(format!("{} -{:?}> {}", b, body, a), b, applier).unwrap(),
+                );
+            }
         }
         Query(qs) => {
             let qs = qs.iter().map(pattern_of_eqterm).collect();
@@ -517,9 +602,11 @@ fn run_program(
 ) -> (Runner<SymbolLang, ()>, Vec<Vec<Subst>>) {
     let egraph = &mut runner.egraph;
     for (a, b) in &prog.facts {
-        let a_id = egraph.add_expr(&a);
-        let b_id = egraph.add_expr(&b);
-        egraph.union(a_id, b_id);
+        //let a_id = egraph.add_expr(&a);
+        //let b_id = egraph.add_expr(&b);
+        let a = a.to_string().parse().unwrap();
+        let b = b.to_string().parse().unwrap();
+        egraph.union_instantiations(&a, &b, &Subst::with_capacity(0), Arc::from("Base Fact"));
     }
     let runner = runner.run(&prog.rules);
     let res = prog
@@ -648,10 +735,13 @@ struct Sequent {
     hyps: Vec<Formula>,
     conc: Formula, // sig : Vec<String>
 }
-/* The only obligations that can be discharged via egglog are those of the form
+/* 
+The only obligations that can be discharged via egglog are those of the form
 ---------------------------------------- (egglog)
 atom, atom, hyp => conc, hyp => conc |- conj(q1,q2,q3), conj()
 which is indeed the form of a "Program".
+
+All other transformations should be recorded as an internal proof tree.
 
 enum Proof {
     LAnd(Int, Box<Proof>, Box<Proof>),
@@ -791,9 +881,45 @@ struct NegPattern<P>{
 
 */
 
+fn apply_subst(
+    pat: &PatternAst<SymbolLang>,
+    subst: &Subst,
+    egraph: &EGraph<SymbolLang, ()>,
+) -> RecExpr<SymbolLang> {
+    //let mut r = RecExpr::default();
+    //for (i, pat_node) in pat.iter().enumerate() {
+    fn worker(
+        i: Id,
+        pat: &PatternAst<SymbolLang>,
+        subst: &Subst,
+        egraph: &EGraph<SymbolLang, ()>,
+    ) -> String {
+        match &pat[i] {
+            ENodeOrVar::Var(w) => {
+                //let expr = simplify(egraph,subst[*w] );
+                // r.add(egraph.extract(subst[*w]))
+                simplify(egraph, *subst.get(*w).unwrap()).to_string()
+            }
+            ENodeOrVar::ENode(e) => {
+                let args: String = e
+                    .children
+                    .iter()
+                    .map(|i| worker(*i, pat, subst, egraph))
+                    .collect();
+                format!("({} {})", e.op.to_string(), args)
+                //let n = e.clone().map_children(|child| ids[usize::from(child)]);
+                //egraph.add(n)
+            }
+        }
+    }
+    worker((pat.as_ref().len() - 1).into(), pat, subst, egraph)
+        .parse()
+        .unwrap()
+}
+
 use core::time::Duration;
 // Refactor this to return not string.
-fn run_file(file: Vec<Entry>) -> String {
+fn run_file(file: Vec<Entry>, opts : &Opts) -> String {
     //let mut env = Env::default();
     let mut prog = Program::default();
 
@@ -804,8 +930,9 @@ fn run_file(file: Vec<Entry>) -> String {
     let runner = Runner::default()
         .with_iter_limit(30)
         .with_node_limit(10_000)
-        .with_time_limit(Duration::from_secs(5));
-    let (runner, query_results) = run_program(&prog, runner);
+        .with_time_limit(Duration::from_secs(5))
+        .with_explanations_enabled();
+    let (mut runner, query_results) = run_program(&prog, runner);
     // Two useful things to turn on. Command line arguments?
     //runner.print_report();
     // runner.egraph.dot().to_png("target/foo.png").unwrap();
@@ -818,22 +945,94 @@ fn run_file(file: Vec<Entry>) -> String {
         } else {
             for subst in res {
                 print_subst(&mut buf, &runner.egraph, &subst);
-                writeln!(buf, ";");
+                if opts.proof {
+                for ab in &q.patterns {
+                    if let Eq(a, b) = ab {
+                        /*
+                        let ast = a.ast.as_ref();
+                        let mut id_buf = vec![0.into(); ast.len()];
+                        let start = egg::pattern::apply_pat(&mut id_buf, ast, &mut runner.egraph, &subst);
+                        let start = simplify(&runner.egraph, start);
+
+                        let ast = b.ast.as_ref();
+                        let mut id_buf = vec![0.into(); ast.len()];
+                        let end = egg::pattern::apply_pat(&mut id_buf, ast, &mut runner.egraph, &subst);
+                        let end = simplify(&runner.egraph, end);
+                        */
+                        let start = apply_subst(&a.ast, &subst, &runner.egraph);
+                        let end = apply_subst(&b.ast, &subst, &runner.egraph);
+                        writeln!(
+                            buf,
+                            "Proof {} = {}: {}",
+                            a,
+                            b,
+                            runner.explain_equivalence(&start, &end).get_flat_string()
+                        );
+                    }
+                }
+            }
             }
         }
     }
     buf
 }
 
-pub fn run(s: String) -> Result<String, String> {
+
+use clap::{AppSettings, Clap};
+
+/// A Prolog-like theorem prover based on Egg
+#[derive(Clap)]
+#[clap(version = "0.01", author = "Philip Zucker <philzook58@gmail.com>")]
+#[clap(setting = AppSettings::ColoredHelp)]
+pub struct Opts {
+    /// Path of Egglog file to run
+    pub filename: Option<String>,
+    /// Turn off verbosity TODO
+    #[clap(short, long)]
+    pub verbose: bool, // quiet?
+    /// Enable Proof Generation (Experimental)
+    #[clap(short, long)]
+    pub proof: bool, // quiet?
+    /// Output graphical representation TODO
+    #[clap(short, long)]
+    pub graph: Option<String>,
+}
+
+impl Default for Opts {
+    fn default() -> Self {
+        Opts {
+            filename : None,
+            verbose : false,
+            proof : false,
+            graph : None
+        }
+    }
+}
+
+pub fn run(s: String, opts : &Opts) -> Result<String, String> {
     let f = parse_file(s)?;
-    Ok(run_file(f))
+    Ok(run_file(f, opts))
 }
 
 use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
-pub fn run_wasm(s: String) -> String {
-    match run(s) {
+pub fn run_wasm_simple(s: String) -> String {
+    let opts = Opts::default();
+    match run(s, &opts) {
+        Ok(e) => e,
+        Err(e) => e,
+    }
+}
+
+#[wasm_bindgen]
+pub fn run_wasm(s: String, proof : bool, graph : bool) -> String {
+    let opts = Opts::default();
+    let opts = Opts {
+        proof,
+        //graph : if graph {Some "graphout.viz"} else None,
+        ..opts
+    };
+    match run(s, &opts) {
         Ok(e) => e,
         Err(e) => e,
     }

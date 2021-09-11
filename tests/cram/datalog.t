@@ -1,8 +1,8 @@
   $ $TESTDIR/run_test.sh datalog.pl
   Results : 
   -? (ancestor xerces ?X)
-  [?X = brooke];
   [?X = damocles];
+  [?X = brooke];
   -? (mortal socrates)
   [];
   -? (path ?X ?Y)

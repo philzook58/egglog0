@@ -10,23 +10,8 @@ use parser::*;
 
 // use lib;
 //use parser::*;
-use clap::{AppSettings, Clap};
 
-/// A Prolog-like theorem prover based on Egg
-#[derive(Clap)]
-#[clap(version = "0.01", author = "Philip Zucker <philzook58@gmail.com>")]
-#[clap(setting = AppSettings::ColoredHelp)]
-struct Opts {
-    /// Path of Egglog file to run
-    filename: Option<String>,
-    /// Turn off verbosity TODO
-    #[clap(short, long)]
-    verbose: bool, // quiet?
-    /// Output graphical representation TODO
-    #[clap(short, long)]
-    graph: Option<String>,
-}
-
+/*
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
@@ -71,17 +56,22 @@ fn repl() {
         }
     }
 }
+*/
+fn repl() {
+    println!("Sorry. REPL currently disabled because wasm was being weird. Please select a file to run as an argument.")
+}
 
+use clap::{Clap};
 fn main() {
     // TODO: better command line grabber
     // Interactve mode?
     let opts: Opts = Opts::parse();
-    let filename = opts.filename; // td::env::args().nth(1).expect("no file path given");
+    let filename = &opts.filename; // td::env::args().nth(1).expect("no file path given");
     match filename {
         Some(filename) => {
             let contents =
                 fs::read_to_string(filename).expect("Something went wrong reading the file");
-            match run(contents) {
+            match run(contents, &opts) {
                 Ok(res) => println!("Results : \n{}", res),
                 Err(err) => println!("Error : \n {}", err),
             }

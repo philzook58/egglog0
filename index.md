@@ -11,18 +11,9 @@ title: "Egglog"
         async function run() {
             await init();
             var query = document.getElementById("query").value;
-            let example = `
-                f(x) = x.
-                /*
-                g(X)=f(x):-z.
-                f(X) = g(Q) :- Q = X, f(x).
-                */
-                y = x.
-                plus(X,Y) <- plus(Y,X). 
-                plus(b,q).
-                ?- f(x) = x, x = x, y = x, plus(b,q) = plus(q,b), f(f(x)).
-                `
-            const result = run_wasm(query);
+            var proof = document.getElementById("proofmode").checked;
+            var graph = false;
+            const result = run_wasm(query, proof, graph);
             console.log(result);
             document.getElementById("result").value = result;
 
@@ -78,6 +69,8 @@ window.onload = () => {
   <option value="id_unique.pl">Uniqueness of Identity</option>
   <option value="pb_compose.pl">Composition of Pullbacks</option>
 </select>
+<input type="checkbox" id="proofmode" name="proofmode" value="">
+<label for="proofmode"> Proofs (Experimental) </label><br>
 <textarea id="result" rows="20" style="width:100%"> </textarea>
 
 # What is this?
