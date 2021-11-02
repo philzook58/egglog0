@@ -61,7 +61,7 @@ fn repl() {
     println!("Sorry. REPL currently disabled because wasm was being weird. Please select a file to run as an argument.")
 }
 
-use clap::{Clap};
+use clap::Clap;
 fn main() {
     // TODO: better command line grabber
     // Interactve mode?

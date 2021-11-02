@@ -59,3 +59,9 @@ Note: I started modifying egg a bit. I exposed the Subst datatypes field.
 - [ ] integerate analysis?
 - [ ] gensym
 - [ ] serialize the egraph
+- [ ] negation checks. nonlogical
+- [ ] cli options to the runner
+
+### Tests
+
+`cram tests/cram/*.t -i`

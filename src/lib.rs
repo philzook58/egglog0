@@ -68,20 +68,16 @@ where
 impl<L: Language, A: Analysis<L>> Searcher<L, A> for EqWrap<Pattern<L>> {
     fn search_eclass(&self, egraph: &EGraph<L, A>, eclass: Id) -> Option<SearchMatches<L>> {
         match self {
-            Bare(p) => p.search_eclass(egraph, eclass)
-                
-               /* match p.search_eclass(egraph, eclass) {
-                    None => None,
-                    Some(matches) => {
-                        Some(SearchMatches {
-                            ast : None,
-                            ..matches
-                        })
-                    }
-                } */
-            
-            
-            ,
+            Bare(p) => p.search_eclass(egraph, eclass),
+            /* match p.search_eclass(egraph, eclass) {
+                None => None,
+                Some(matches) => {
+                    Some(SearchMatches {
+                        ast : None,
+                        ..matches
+                    })
+                }
+            } */
             Eq(p1, p2) => {
                 let matches = p1.search_eclass(egraph, eclass)?;
                 let matches2 = p2.search_eclass(egraph, eclass)?;
@@ -212,24 +208,24 @@ where
         rule_name: Arc<str>,
     ) -> Vec<Id> {
         match self {
-            Bare(a) => //a.apply_matches(egraph, matches, rule_name)
+            Bare(a) =>
+            //a.apply_matches(egraph, matches, rule_name)
             {
-            // Ignoreapply semantics
-            let mut added = vec![];
-            for mat in matches {
-                for subst in &mat.substs {
-                    let ast = a.ast.as_ref();
-                    let mut id_buf = vec![0.into(); ast.len()];
-                    let id = apply_pat(&mut id_buf, ast, egraph, subst);
-                    added.push(id)
-                    // root is just ignored?
+                // Ignoreapply semantics
+                let mut added = vec![];
+                for mat in matches {
+                    for subst in &mat.substs {
+                        let ast = a.ast.as_ref();
+                        let mut id_buf = vec![0.into(); ast.len()];
+                        let id = apply_pat(&mut id_buf, ast, egraph, subst);
+                        added.push(id)
+                        // root is just ignored?
+                    }
                 }
+                // TODO: REALLY THINK ABOUT THIS!!!!
+                added
             }
-            // TODO: REALLY THINK ABOUT THIS!!!!
-            added 
-        }
-            
-            ,
+
             Eq(l, r) => {
                 let mut added = vec![]; // added are union updates, of which there are none
                 for mat in matches {
@@ -587,6 +583,7 @@ pub fn process_entry_prog(prog: &mut Program, entry: Entry) {
     }
 }
 
+// run_program with default Runner
 fn run_program2(prog: &Program) -> Vec<Vec<Subst>> {
     let runner = Runner::default()
         .with_iter_limit(30)
@@ -705,10 +702,12 @@ fn interp_goal(prog: &mut Program, env: &Env2, formula: Formula) {
             env.metavars.extend(vs); // patvars?
             interp_goal(prog, &env, *f)
         }
-        Impl(hyp, conc) => {
-            interp_formula(prog, env, *hyp);
-            interp_goal(prog, env, *conc);
-        }
+        //Impl(hyp, conc) => {
+            //Is this right? Aren't I injecting hypotheses into the program for other queries then?
+            // These hypotheses need to be retracted.
+        //    interp_formula(prog, env, *hyp);
+        //    interp_goal(prog, env, *conc);
+        //}
         ForAll(vs, f) => {
             let f = freshen_formula(vs, &*f);
             // freshvars mapping rather than doing eager freshen?
@@ -735,7 +734,7 @@ struct Sequent {
     hyps: Vec<Formula>,
     conc: Formula, // sig : Vec<String>
 }
-/* 
+/*
 The only obligations that can be discharged via egglog are those of the form
 ---------------------------------------- (egglog)
 atom, atom, hyp => conc, hyp => conc |- conj(q1,q2,q3), conj()
@@ -784,7 +783,7 @@ fn run_query(hyps, q) {
 
 fn interp_formula(prog: &mut Program, env: &Env2, formula: Formula) {
     match formula {
-        Atom(a) => {
+        Atom(a) => { // I can support forall x, f x = g x as a bidirectional rule
             match interp_eqwrap(env, &a) {
                 Eq(a, b) => {
                     let a = recexpr_of_groundterm(&is_ground(&a).unwrap());
@@ -841,7 +840,12 @@ fn interp_formula(prog: &mut Program, env: &Env2, formula: Formula) {
                 .push(egg::Rewrite::new("", searcher, applier).unwrap())
         }
         // Exists in conclusion. Skolemized on freshvars?
-        // We can't allow unguarded exists though.
+        // We can't allow unguarded exists though. uh. Yes we can.
+        //Exists(vs, f) => {
+            // freshvars is a bad name
+       //     let freshvars = vs.map(|v| Apply(gensym(v), env.freshvars );
+
+        //}
         // Nested Programs? swaping facts and queries in some sense?
         ForAll(vs, f) => {
             let mut env = env.clone();
@@ -919,7 +923,7 @@ fn apply_subst(
 
 use core::time::Duration;
 // Refactor this to return not string.
-fn run_file(file: Vec<Entry>, opts : &Opts) -> String {
+fn run_file(file: Vec<Entry>, opts: &Opts) -> String {
     //let mut env = Env::default();
     let mut prog = Program::default();
 
@@ -946,37 +950,36 @@ fn run_file(file: Vec<Entry>, opts : &Opts) -> String {
             for subst in res {
                 print_subst(&mut buf, &runner.egraph, &subst);
                 if opts.proof {
-                for ab in &q.patterns {
-                    if let Eq(a, b) = ab {
-                        /*
-                        let ast = a.ast.as_ref();
-                        let mut id_buf = vec![0.into(); ast.len()];
-                        let start = egg::pattern::apply_pat(&mut id_buf, ast, &mut runner.egraph, &subst);
-                        let start = simplify(&runner.egraph, start);
+                    for ab in &q.patterns {
+                        if let Eq(a, b) = ab {
+                            /*
+                            let ast = a.ast.as_ref();
+                            let mut id_buf = vec![0.into(); ast.len()];
+                            let start = egg::pattern::apply_pat(&mut id_buf, ast, &mut runner.egraph, &subst);
+                            let start = simplify(&runner.egraph, start);
 
-                        let ast = b.ast.as_ref();
-                        let mut id_buf = vec![0.into(); ast.len()];
-                        let end = egg::pattern::apply_pat(&mut id_buf, ast, &mut runner.egraph, &subst);
-                        let end = simplify(&runner.egraph, end);
-                        */
-                        let start = apply_subst(&a.ast, &subst, &runner.egraph);
-                        let end = apply_subst(&b.ast, &subst, &runner.egraph);
-                        writeln!(
-                            buf,
-                            "Proof {} = {}: {}",
-                            a,
-                            b,
-                            runner.explain_equivalence(&start, &end).get_flat_string()
-                        );
+                            let ast = b.ast.as_ref();
+                            let mut id_buf = vec![0.into(); ast.len()];
+                            let end = egg::pattern::apply_pat(&mut id_buf, ast, &mut runner.egraph, &subst);
+                            let end = simplify(&runner.egraph, end);
+                            */
+                            let start = apply_subst(&a.ast, &subst, &runner.egraph);
+                            let end = apply_subst(&b.ast, &subst, &runner.egraph);
+                            writeln!(
+                                buf,
+                                "Proof {} = {}: {}",
+                                a,
+                                b,
+                                runner.explain_equivalence(&start, &end).get_flat_string()
+                            );
+                        }
                     }
                 }
-            }
             }
         }
     }
     buf
 }
-
 
 use clap::{AppSettings, Clap};
 
@@ -1001,15 +1004,15 @@ pub struct Opts {
 impl Default for Opts {
     fn default() -> Self {
         Opts {
-            filename : None,
-            verbose : false,
-            proof : false,
-            graph : None
+            filename: None,
+            verbose: false,
+            proof: false,
+            graph: None,
         }
     }
 }
 
-pub fn run(s: String, opts : &Opts) -> Result<String, String> {
+pub fn run(s: String, opts: &Opts) -> Result<String, String> {
     let f = parse_file(s)?;
     Ok(run_file(f, opts))
 }
@@ -1025,7 +1028,7 @@ pub fn run_wasm_simple(s: String) -> String {
 }
 
 #[wasm_bindgen]
-pub fn run_wasm(s: String, proof : bool, graph : bool) -> String {
+pub fn run_wasm(s: String, proof: bool, graph: bool) -> String {
     let opts = Opts::default();
     let opts = Opts {
         proof,
