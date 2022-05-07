@@ -2,6 +2,8 @@
 
 Using the [egg](https://egraphs-good.github.io/) library with a file format and semantics similar to datalog.
 
+Short talk proposal paper for EGRAPHS 2022 <https://github.com/philzook58/egglog0-talk/blob/main/out.pdf>
+
 Explanatory blog posts: 
 - <https://www.philipzucker.com/egglog-checkpoint/>
 - <https://www.philipzucker.com/egglog2-monic/>
