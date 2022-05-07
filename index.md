@@ -65,6 +65,7 @@ window.onload = () => {
    <option value="ski.pl">SKI Combinators</option>
    <option value="lists.pl">Lists</option>
   <option value="arith.pl">Arithmetic</option>
+  <option value="mem.pl">Memory/Arrays</option>
   <option value="cat1.pl">Pullback of Monic is Monic</option>
   <option value="id_unique.pl">Uniqueness of Identity</option>
   <option value="pb_compose.pl">Composition of Pullbacks</option>
