@@ -17,11 +17,9 @@
 > pzucker@draper.com
 > Draper Laboratory
 
-*/
 
 
-/*
-
+-------
 Datalog
 -------
 
@@ -73,6 +71,17 @@ Multipatterns
 
 */
 
+
+
+
+
+
+
+
+
+
+
+
 /*
 ***********************************************
 ***********************************************
@@ -88,6 +97,15 @@ Multipatterns
 ***********************************************
 */
 
+
+
+
+
+
+
+
+
+
 /*
 -----------
 Injectivity
@@ -102,6 +120,13 @@ Injectivity
 X = Y, Xs = Ys :- cons(X,Xs) = cons(Y,Ys).
 X = Y :- add(X,Z) = add(Y,Z).
 
+
+
+
+
+
+
+
 /*
 ---------------------
 Memory Simplification
@@ -110,7 +135,6 @@ Memory Simplification
 > Alias Analysis + Simplification
 > SMTlib theory of arrays %/ McCarthy
 > Many SMT theories are expressible as Horn Clauses (side conditions)
-
 */
 
 /*select grabs stored value*/
@@ -132,7 +156,19 @@ Equation Solving
 > Variable Isolation
 > Extract terms without variables
 */
+
 sub(Z,X) = Y :- add(X,Y) = Z.
+
+
+
+
+
+
+
+
+
+
+
 
 /*
 ----------
@@ -144,6 +180,16 @@ Reflection
 A = B :- true = eq(A,B).
 true = eq(A,B) :- A = B.   
 
+
+
+
+
+
+
+
+
+
+
 /*
 -------------------------
 Uniqueness Quantification
@@ -154,6 +200,15 @@ Uniqueness Quantification
                 `∀ x, P(x) -> Q(x,f(x))`
 > Uniqueness Property `∀ a b, P(a) /\ P(b) -> a = b`
 */
+
+
+
+
+
+
+
+
+
 
 /*
 ***************************************************
@@ -171,7 +226,6 @@ Uniqueness Quantification
         James Fairbanks, and Evan Patterson for their 
         helpful discussions.
 > DARPA Grant #
-
 
 ------------
 Related Work

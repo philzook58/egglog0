@@ -56,7 +56,7 @@ window.onload = () => {
     }
 </script>
 
-<textarea id="query" rows="20" style="width:100%">
+<textarea  spellcheck="false" id="query" rows="20" style="width:100%">
 </textarea>
 <button onclick="run()">Run</button>
 <select name="example" onchange="pickerbox(this)" id="examplepicker">
