@@ -60,6 +60,7 @@ window.onload = () => {
 </textarea>
 <button onclick="run()">Run</button>
 <select name="example" onchange="pickerbox(this)" id="examplepicker">
+  <option value="talk.pl">PLDI Talk</option>
   <option value="basics.pl">Basics</option>
    <option value="datalog.pl">Datalog</option>
    <option value="ski.pl">SKI Combinators</option>
