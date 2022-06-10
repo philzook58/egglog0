@@ -35,7 +35,7 @@ edge(c,d).
 
 /* Rules */
 path(X,Y) :- edge(X,Y).
-path(X,Y) :- edge(X,Y), path(Y,Z).
+path(X,Z) :- edge(X,Y), path(Y,Z).
 
 /* Query */
 ?- path(X,Y).
@@ -50,7 +50,7 @@ Egglog0
 > Supports ordinary datalog with terms
 > Rules: query using RHS (e-matching multipattern), instantiate and insert LHS
 > Capitalized pattern variables bind to eclass ids
-> Special equality `_=_` is E-graph Equality
+> Special equality `_=_` is E-graph equality / union find
 > Queries: e-match and return all results.
 */
 
@@ -199,7 +199,9 @@ Uniqueness Quantification
                 `∀ x, P(x) -> ∃ y, Q(x,y)`  becomes
                 `∀ x, P(x) -> Q(x,f(x))`
 > Uniqueness Property `∀ a b, P(a) /\ P(b) -> a = b`
-*/
+  is directly expressible in Egglog0.
+> See "Pullback of Monic is Monic" and 
+  "Composition of Pullbacks" examples for more detail
 
 
 
@@ -210,7 +212,8 @@ Uniqueness Quantification
 
 
 
-/*
+
+
 ***************************************************
 ***************************************************
    ____                  _   _                ___  

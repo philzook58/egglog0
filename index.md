@@ -81,6 +81,7 @@ A prolog like syntax for interfacing with the egg egraph library.
 
 Github repo: <https://github.com/philzook58/egglog>
 Read more here: 
+- [Talk abstract](https://github.com/philzook58/egglog0-talk/blob/main/out.pdf)
 - <https://www.philipzucker.com/egglog-checkpoint/> - Early version of egglog, motivations.
 - <https://www.philipzucker.com/egglog2-monic/> - A simple category theory theorem about pullbacks.
 - <https://www.philipzucker.com/egglog-3/> - Arithmetic, SKI combinator, datalog, lists examples
