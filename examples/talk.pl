@@ -9,7 +9,7 @@
  |______\___/ \__, |\__, |_|_| |_|\__, |  \__,_|_| |_| |______\__, |\__, |
                __/ | __/ |         __/ |                       __/ | __/ |
               |___/ |___/         |___/                       |___/ |___/ 
-*************************************************************************
+**************************************************************************
 **************************************************************************
                            Datalog on E-Graphs
 
@@ -24,8 +24,8 @@ Datalog
 -------
 
 > Bottom up relative of prolog
-> Databases, Logic, and Proofs
-
+> Efficient operations, beautiful denotations
+> Application: Program Analysis
 */
 
 /* Facts */
@@ -49,14 +49,13 @@ Egglog0
 > This database holds terms and equality relation
 > Supports ordinary datalog with terms
 > Rules: query using RHS (e-matching multipattern), instantiate and insert LHS
-> Capitalized pattern variables bind to eclass ids
 > Special equality `_=_` is E-graph equality / union find
-> Queries: e-match and return all results.
+> Queries: e-match and extract all results.
 */
 
 X = E :- add(X,zero) = E.
 add(Y,X) = E :- add(X,Y) = E.
-add(Y,X) <- add(X,Y).  /* identical syntax sugar */
+add(Y,X) <- add(X,Y).  /* syntax sugar */
 
 add(zero,a).
 ?- add(zero,a) = Z.
@@ -65,7 +64,7 @@ add(zero,a).
 -------------
 Multipatterns
 -------------
-> Multipatterns bind, Guards check.
+> Guards check, Multipatterns bind.
 > Threads the e-matching compiler environment binding between patterns
 > Upstreamed to egg https://github.com/egraphs-good/egg/pull/168
 
@@ -113,7 +112,7 @@ Injectivity
 
 > ∀ a b, f(a) = f(b) -> a = b
 > ∀ a b, a != b -> f(a) != f(b)
-> Constructors, Negation, constant addition
+> ex: Constructors, addition
 > Unification
 
 */
@@ -133,38 +132,39 @@ Memory Simplification
 ---------------------
 
 > Alias Analysis + Simplification
-> SMTlib theory of arrays %/ McCarthy
+> SMTlib theory of arrays
 > Many SMT theories are expressible as Horn Clauses (side conditions)
 */
-
 /*select grabs stored value*/
-V <- select(A ,store(A, V, Mem)).
-
+V <- select(A, store(A, V, Mem)).
 /*select ignores different addresses*/
-select(A1,Mem) = E :- select(A1,store(A2,V,Mem)) = E, neq(A1,A2).
-
-/*non aliasing writes commute*/
-store(A2,V2, store(A1,V1,Mem)) = E :- store(A1,V1, store(A2,V2,Mem)) = E, neq(A1,A2).
-
+select(A1, Mem) = E :- select(A1, store(A2, V, Mem)) = E, neq(A1, A2).
+/*non-aliasing writes commute*/
+store(A2, V2, store(A1, V1, Mem)) = E :- store(A1, V1, store(A2, V2, Mem)) = E, neq(A1,A2).
 /*Aliasing Writes destroy old value.*/
 store(A, V1, Mem) <- store(A, V1, store(A,V2,Mem)).
+
+neq(r0,r1). 
+select(r1, store(r0, v0, store(r1, v1, mem))).
+?- select(r1, store(r0, v0, store(r1, v1, mem))) = T.
 
 /*
 ----------------
 Equation Solving
 ----------------
+> Do the same thing to both sides.
 > Variable Isolation
-> Extract terms without variables
+> Extract terms without unwanted variables
 */
 
-sub(Z,X) = Y :- add(X,Y) = Z.
+add(Z,neg(X)) = Y :- add(X,Y) = Z.
+X <- neg(neg(X)).
+zero <- add(X,neg(X)).
+neg(add(X,Y)) <-> add(neg(X),neg(Y)).
 
-
-
-
-
-
-
+/* Hack extraction by giving unwanted variable a big name */
+add(a,add(c,my(big(expr)))) = c.
+?- my(big(expr)) = T.
 
 
 
@@ -234,7 +234,7 @@ Uniqueness Quantification
 Related Work
 ------------
 > Relational E-Matching https://arxiv.org/abs/2108.02290
-> SMT Multipatterns
-> Souffle Egg https://www.hytradboi.com/2022/writing-part-of-a-compiler-in-datalog
 > Egg-lite
+> Souffle Egg https://www.hytradboi.com/2022/writing-part-of-a-compiler-in-datalog
+> SMT Multipatterns
 */
