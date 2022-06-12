@@ -228,7 +228,6 @@ Uniqueness Quantification
         Zachary Tatlock, Alessandro Cheli, Cody Roux,
         James Fairbanks, and Evan Patterson for their 
         helpful discussions.
-> DARPA Grant #
 
 ------------
 Related Work
