@@ -24,8 +24,9 @@ Datalog
 -------
 
 > Bottom up relative of prolog
-> Efficient operations, beautiful denotations
-> Application: Program Analysis
+> Efficient execution, beautiful semantics
+> Databases, Relations, and Logic
+> Query RHS, insert LHS
 */
 
 /* Facts */
@@ -48,7 +49,7 @@ Egglog0
 > E-Graphs are a Database
 > This database holds terms and equality relation
 > Supports ordinary datalog with terms
-> Rules: query using RHS (e-matching multipattern), instantiate and insert LHS
+> Rules: query RHS (e-matching multipattern), instantiate and insert LHS
 > Special equality `_=_` is E-graph equality / union find
 > Queries: e-match and extract all results.
 */
@@ -224,7 +225,7 @@ Uniqueness Quantification
   \___\_\\__,_|\___||___/\__|_|\___/|_| |_|___(_)  
 ***************************************************
 *************************************************** 
-> Thanks to Yihong Zhang, Remy Yisu Wang, Max Willsey, 
+> Thanks to Yihong Zhang, Yisu Remy Wang, Max Willsey, 
         Zachary Tatlock, Alessandro Cheli, Cody Roux,
         James Fairbanks, and Evan Patterson for their 
         helpful discussions.
