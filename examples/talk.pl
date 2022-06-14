@@ -24,7 +24,7 @@ Datalog
 -------
 
 > Bottom up relative of prolog
-> Efficient execution, beautiful semantics
+> Efficiently executable, beautiful semantics
 > Databases, Relations, and Logic
 > Query RHS, insert LHS
 */
@@ -112,7 +112,6 @@ Injectivity
 -----------
 
 > ∀ a b, f(a) = f(b) -> a = b
-> ∀ a b, a != b -> f(a) != f(b)
 > ex: Constructors, addition
 > Unification
 
