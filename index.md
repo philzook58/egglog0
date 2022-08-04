@@ -79,6 +79,8 @@ window.onload = () => {
 
 A prolog like syntax for interfacing with the egg egraph library.
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/dbgZJyw3hnk?start=2725" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 Github repo: <https://github.com/philzook58/egglog>
 Read more here: 
 - [Talk abstract](https://github.com/philzook58/egglog0-talk/blob/main/out.pdf)
