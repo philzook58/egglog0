@@ -1,6 +1,8 @@
 ---
-title: "Egglog"
+title: "Egglog0"
 ---
+
+A prototype implementation. You may be looking for <https://github.com/egraphs-good/egglog>
 
 ## Try It Out!
 
