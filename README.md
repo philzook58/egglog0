@@ -1,4 +1,7 @@
-# egglog
+Defunct repo: Please see https://github.com/egraphs-good/egglog 
+
+
+# egglog0
 
 Using the [egg](https://egraphs-good.github.io/) library with a file format and semantics similar to datalog.
 
